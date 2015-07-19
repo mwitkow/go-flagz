@@ -1,21 +1,18 @@
 //
 
-
 package etcd
 
-
 import (
-	"github.com/coreos/go-etcd/etcd"
-	"strings"
 	"fmt"
-	"time"
+	"github.com/coreos/go-etcd/etcd"
 	"math/rand"
+	"strings"
+	"time"
 )
 
-
-
+// Controls the auto updating process of a "flags"-compatible package from Etcd.
 type Updater struct {
-	client        etcd.Client
+	client        *etcd.Client
 	flagSet       flagSet
 	logger        logger
 	etcdPath      string
@@ -26,8 +23,8 @@ type Updater struct {
 
 // TODO: Figure out a struct `etcdCodes` here?
 const (
-	preconditionFailed = 101
-	errorWatcherCleared = 400
+	preconditionFailed     = 101
+	errorWatcherCleared    = 400
 	errorEventIndexCleared = 401
 )
 
@@ -45,19 +42,19 @@ type logger interface {
 	Println(v ...interface{})
 }
 
-func New(set flagSet, client etcd.Client, etcdPath string, logger logger) (*Updater, error) {
+func New(set flagSet, client *etcd.Client, etcdPath string, logger logger) (*Updater, error) {
 	return &Updater{
-		flagSet: set,
-		client: client,
-		etcdPath: etcdPath,
-		logger: logger,
+		flagSet:       set,
+		client:        client,
+		etcdPath:      etcdPath,
+		logger:        logger,
 		lastEtcdIndex: 0,
-		watching: false,
-		watchStop: make(chan bool),
+		watching:      false,
+		watchStop:     make(chan bool),
 	}, nil
 }
 
-// Performs the initial of Etcd for all flags and updates the specified FlagSet.
+// Performs the initial read of etcd for all flags and updates the specified FlagSet.
 func (u *Updater) Initialize() error {
 	if u.lastEtcdIndex != 0 {
 		return fmt.Errorf("flagz: already initialized.")
@@ -65,6 +62,7 @@ func (u *Updater) Initialize() error {
 	return u.readAllFlags()
 }
 
+// Starts the auto-updating go-routine.
 func (u *Updater) Start() error {
 	if u.lastEtcdIndex == 0 {
 		return fmt.Errorf("flagz: not initialized")
@@ -72,10 +70,12 @@ func (u *Updater) Start() error {
 	if u.watching {
 		return fmt.Errorf("flagz: already watching")
 	}
+	u.watching = true
 	go u.watchForUpdates()
 	return nil
 }
 
+// Stops the auto-updating go-routine.
 func (u *Updater) Stop() error {
 	if !u.watching {
 		return fmt.Errorf("flagz: not watching")
@@ -116,14 +116,14 @@ func (u *Updater) readAllFlags() error {
 	return nil
 }
 
-func (u * Updater) watchForUpdates() error {
+func (u *Updater) watchForUpdates() error {
 	// We need to implement our own watcher because the one in go-etcd doesn't handle errorcode 400 and 401.
 	// See https://github.com/coreos/etcd/blob/master/Documentation/errorcode.md
 	// And https://coreos.com/etcd/docs/2.0.8/api.html#waiting-for-a-change
 	for u.watching {
 		resp, err := u.client.Watch(
 			u.etcdPath,
-			u.lastEtcdIndex + 1,
+			u.lastEtcdIndex+1,
 			/*recursive*/
 			true,
 			/* recvChan*/
@@ -140,7 +140,7 @@ func (u * Updater) watchForUpdates() error {
 			u.logger.Printf("flagz: wicked etcd error. Restarting watching after some time. %v", err)
 			// Etcd started dropping watchers, or is re-electing. Give it some time.
 			randOffsetMs := int(500 * rand.Float32())
-			time.Sleep(1 * time.Second + time.Duration(randOffsetMs) * time.Millisecond)
+			time.Sleep(1*time.Second + time.Duration(randOffsetMs)*time.Millisecond)
 			continue
 		}
 		u.lastEtcdIndex = resp.Node.ModifiedIndex
@@ -159,7 +159,7 @@ func (u * Updater) watchForUpdates() error {
 		}
 		err = u.flagSet.Set(flagName, value)
 		if err != nil {
-			u.logger.Printf("flagz: failed updating flag=%v, because of: %", flagName, err)
+			u.logger.Printf("flagz: failed updating flag=%v, because of: %v", flagName, err)
 			u.rollbackEtcdValue(flagName, resp)
 		} else {
 			u.logger.Printf("flagz: updated flag=%v to value=%v at etcdindex=%v", flagName, value, u.lastEtcdIndex)
@@ -204,9 +204,6 @@ func keyToFlag(etcdKey string) (string, error) {
 	if len(parts) <= 1 {
 		return "", fmt.Errorf("flagz: can't extract flagName")
 	}
-	name := parts[len(parts) - 1]
+	name := parts[len(parts)-1]
 	return name, nil
 }
-
-
-
