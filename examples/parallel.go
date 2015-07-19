@@ -6,7 +6,7 @@ import (
 	"os"
 	log "github.com/Sirupsen/logrus"
 	"time"
-	flagz_etcd "github.com/mwitkow/go-flagz/etcd"
+	flagz_etcd "github.com/mwitkow-io/go-flagz/etcd"
 )
 
 var (
