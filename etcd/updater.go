@@ -6,7 +6,6 @@ package etcd
 
 import (
 	"github.com/coreos/go-etcd/etcd"
-	"flag"
 	"strings"
 	"fmt"
 	"time"
@@ -17,10 +16,10 @@ import (
 
 type Updater struct {
 	client        etcd.Client
-	flagSet       flag.FlagSet
+	flagSet       flagSet
 	logger        logger
 	etcdPath      string
-	lastEtcdIndex int
+	lastEtcdIndex uint64
 	watching      bool
 	watchStop     chan bool
 }
@@ -93,7 +92,7 @@ func (u *Updater) readAllFlags() error {
 		return err
 	}
 	u.lastEtcdIndex = resp.EtcdIndex
-	errorStrings := &[]string{}
+	errorStrings := []string{}
 	for _, node := range resp.Node.Nodes {
 		if node.Dir {
 			u.logger.Printf("flagz: ignoring subdirectory %v", node.Key)
@@ -101,12 +100,12 @@ func (u *Updater) readAllFlags() error {
 		}
 		flagName, err := keyToFlag(node.Key)
 		if err != nil {
-			errorStrings = append(errorStrings, err)
+			errorStrings = append(errorStrings, err.Error())
 		}
 		if node.Value != "" {
 			err := u.flagSet.Set(flagName, node.Value)
 			if err != nil {
-				errorStrings = append(errorStrings, string(err))
+				errorStrings = append(errorStrings, err.Error())
 			}
 		}
 	}
@@ -140,7 +139,8 @@ func (u * Updater) watchForUpdates() error {
 		} else if err != nil {
 			u.logger.Printf("flagz: wicked etcd error. Restarting watching after some time. %v", err)
 			// Etcd started dropping watchers, or is re-electing. Give it some time.
-			time.Sleep(1 * time.Second + 500 * time.Millisecond * rand.Float32())
+			randOffsetMs := int(500 * rand.Float32())
+			time.Sleep(1 * time.Second + time.Duration(randOffsetMs) * time.Millisecond)
 			continue
 		}
 		u.lastEtcdIndex = resp.Node.ModifiedIndex
@@ -159,7 +159,8 @@ func (u * Updater) watchForUpdates() error {
 		}
 		err = u.flagSet.Set(flagName, value)
 		if err != nil {
-			u.rollbackEtcdValue(flagName, resp, err)
+			u.logger.Printf("flagz: failed updating flag=%v, because of: %", flagName, err)
+			u.rollbackEtcdValue(flagName, resp)
 		} else {
 			u.logger.Printf("flagz: updated flag=%v to value=%v at etcdindex=%v", flagName, value, u.lastEtcdIndex)
 		}
@@ -167,7 +168,7 @@ func (u * Updater) watchForUpdates() error {
 	return nil
 }
 
-func (u *Updater) rollbackEtcdValue(flagName string, resp etcd.Response, err error) {
+func (u *Updater) rollbackEtcdValue(flagName string, resp *etcd.Response) {
 	var err error
 	if resp.PrevNode != nil {
 		// It's just a new value that's wrong, roll back to prevNode value atomically.
@@ -200,7 +201,11 @@ func (u *Updater) rollbackEtcdValue(flagName string, resp etcd.Response, err err
 
 func keyToFlag(etcdKey string) (string, error) {
 	parts := strings.Split(etcdKey, "/")
-	return parts[len(parts) - 1]
+	if len(parts) <= 1 {
+		return "", fmt.Errorf("flagz: can't extract flagName")
+	}
+	name := parts[len(parts) - 1]
+	return name, nil
 }
 
 
