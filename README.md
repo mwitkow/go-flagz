@@ -15,7 +15,7 @@ Dynamic configuration allows for fast iteration cycles, and provides valuable fl
  * Your service is getting overloaded and you want to disable certain costly features, and you can't afford 
  restarting because you'd lose important capacity.
  
-All of these unformly across a shard of your services. Of course with great power comes great responsibility :)
+All of these uniformly across a shard of your services. Of course with great power comes great responsibility :)
 
 ## How?
 
