@@ -24,21 +24,21 @@ import (
 	"strings"
 	"time"
 
-	etcd "github.com/coreos/etcd/client"
 	"github.com/coreos/etcd/Godeps/_workspace/src/golang.org/x/net/context"
+	etcd "github.com/coreos/etcd/client"
 )
 
 // Controls the auto updating process of a "flags"-compatible package from Etcd.
 type Updater struct {
-	client        etcd.Client
-	etcdKeys      etcd.KeysAPI
-	flagSet       flagSet
-	logger        logger
-	etcdPath      string
+	client    etcd.Client
+	etcdKeys  etcd.KeysAPI
+	flagSet   flagSet
+	logger    logger
+	etcdPath  string
 	lastIndex uint64
-	watching      bool
-	context       context.Context
-	cancel        context.CancelFunc
+	watching  bool
+	context   context.Context
+	cancel    context.CancelFunc
 }
 
 // Minimum interface needed to support dynamic flags.
@@ -55,12 +55,12 @@ type logger interface {
 
 func New(set flagSet, keysApi etcd.KeysAPI, etcdPath string, logger logger) (*Updater, error) {
 	u := &Updater{
-		flagSet:       set,
-		etcdKeys:      keysApi,
-		etcdPath:      etcdPath,
-		logger:        logger,
+		flagSet:   set,
+		etcdKeys:  keysApi,
+		etcdPath:  etcdPath,
+		logger:    logger,
 		lastIndex: 0,
-		watching:      false,
+		watching:  false,
 	}
 	u.context, u.cancel = context.WithCancel(context.Background())
 	return u, nil

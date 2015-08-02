@@ -1,21 +1,19 @@
 package etcd_test
 
 import (
-	"testing"
-	"os"
 	"flag"
+	"os"
+	"testing"
 	"time"
-
 
 	updater "github.com/mwitkow-io/go-flagz/etcd"
 	"github.com/mwitkow-io/go-flagz/test_etcd"
 
-
 	"github.com/Sirupsen/logrus"
 	etcd "github.com/coreos/etcd/client"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/net/context"
-	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -99,17 +97,17 @@ func (s *UpdaterTestSuite) Test_DynamicUpdate() {
 	s.setFlagzValue("someint", "2014")
 	eventually(s.T(), 1*time.Second,
 		assert.Equal, 2014,
-		func() interface{} {return *someInt},
+		func() interface{} { return *someInt },
 		"someint value should change")
 	s.setFlagzValue("someint", "2015")
 	eventually(s.T(), 1*time.Second,
 		assert.Equal, 2015,
-		func() interface{} {return *someInt},
+		func() interface{} { return *someInt },
 		"someint value should change")
 	s.setFlagzValue("someint", "2016")
 	eventually(s.T(), 1*time.Second,
 		assert.Equal, 2016,
-		func() interface{} {return *someInt},
+		func() interface{} { return *someInt },
 		"someint value should change")
 }
 
@@ -137,16 +135,14 @@ func (s *UpdaterTestSuite) Test_DynamicUpdateRestoresGoodState() {
 	s.setFlagzValue("somefloat", "3.14")
 	eventually(s.T(), 1*time.Second,
 		assert.Equal, 2016,
-		func() interface{} {return *someInt},
+		func() interface{} { return *someInt },
 		"someint value should change, after rolled back")
 	eventually(s.T(), 1*time.Second,
 		assert.Equal, 3.14,
-		func() interface{} {return *someFloat},
+		func() interface{} { return *someFloat },
 		"somefloat value should change")
 
-
 }
-
 
 func TestUpdaterSuite(t *testing.T) {
 	server, err := test_etcd.New(os.Stderr)
@@ -166,7 +162,7 @@ type getter func() interface{}
 
 // eventually tries a given Assert function 5 times over the period of time.
 func eventually(T *testing.T, duration time.Duration,
-		af assertFunc, expected interface{}, actual getter, msgAndArgs...interface{}) {
+	af assertFunc, expected interface{}, actual getter, msgAndArgs ...interface{}) {
 	increment := duration / 5
 	for i := 0; i < 5; i++ {
 		time.Sleep(increment)
@@ -183,5 +179,5 @@ type testingLog struct {
 }
 
 func (tl *testingLog) Printf(format string, v ...interface{}) {
-	tl.T.Logf(format + "\n", v...)
+	tl.T.Logf(format+"\n", v...)
 }
