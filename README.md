@@ -42,8 +42,6 @@ In case of errors (parsing, disallowed values) flagz will atomically roll back t
 
 # Status
 
-This is a proof of concept. Integration tests pending.
-
 Features planned:
  
   * HTTP `Handler` for displaying state of flags.
