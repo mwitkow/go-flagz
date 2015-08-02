@@ -1,32 +1,45 @@
+// Updaterof Go "flags"-compatible data base on dynamic etcd watches.
 //
+// Copyright 2015 Michal Witkowski. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Package etcd provides an updater for go "flags"-compatible FlagSets based on dynamic changes in etcd storage.
 
 package etcd
 
 import (
 	"fmt"
-	"github.com/coreos/go-etcd/etcd"
 	"math/rand"
 	"strings"
 	"time"
+
+	"github.com/coreos/etcd/Godeps/_workspace/src/golang.org/x/net/context"
+	etcd "github.com/coreos/etcd/client"
 )
 
 // Controls the auto updating process of a "flags"-compatible package from Etcd.
 type Updater struct {
-	client        *etcd.Client
-	flagSet       flagSet
-	logger        logger
-	etcdPath      string
-	lastEtcdIndex uint64
-	watching      bool
-	watchStop     chan bool
+	client    etcd.Client
+	etcdKeys  etcd.KeysAPI
+	flagSet   flagSet
+	logger    logger
+	etcdPath  string
+	lastIndex uint64
+	watching  bool
+	context   context.Context
+	cancel    context.CancelFunc
 }
-
-// TODO: Figure out a struct `etcdCodes` here?
-const (
-	preconditionFailed     = 101
-	errorWatcherCleared    = 400
-	errorEventIndexCleared = 401
-)
 
 // Minimum interface needed to support dynamic flags.
 // As implemented by "flag" and "spf13/pflag".
@@ -37,26 +50,25 @@ type flagSet interface {
 // Minimum logger interface needed.
 // Default "log" and "logrus" should support these.
 type logger interface {
-	Print(v ...interface{})
 	Printf(format string, v ...interface{})
-	Println(v ...interface{})
 }
 
-func New(set flagSet, client *etcd.Client, etcdPath string, logger logger) (*Updater, error) {
-	return &Updater{
-		flagSet:       set,
-		client:        client,
-		etcdPath:      etcdPath,
-		logger:        logger,
-		lastEtcdIndex: 0,
-		watching:      false,
-		watchStop:     make(chan bool),
-	}, nil
+func New(set flagSet, keysApi etcd.KeysAPI, etcdPath string, logger logger) (*Updater, error) {
+	u := &Updater{
+		flagSet:   set,
+		etcdKeys:  keysApi,
+		etcdPath:  etcdPath,
+		logger:    logger,
+		lastIndex: 0,
+		watching:  false,
+	}
+	u.context, u.cancel = context.WithCancel(context.Background())
+	return u, nil
 }
 
 // Performs the initial read of etcd for all flags and updates the specified FlagSet.
 func (u *Updater) Initialize() error {
-	if u.lastEtcdIndex != 0 {
+	if u.lastIndex != 0 {
 		return fmt.Errorf("flagz: already initialized.")
 	}
 	return u.readAllFlags()
@@ -64,7 +76,7 @@ func (u *Updater) Initialize() error {
 
 // Starts the auto-updating go-routine.
 func (u *Updater) Start() error {
-	if u.lastEtcdIndex == 0 {
+	if u.lastIndex == 0 {
 		return fmt.Errorf("flagz: not initialized")
 	}
 	if u.watching {
@@ -80,18 +92,17 @@ func (u *Updater) Stop() error {
 	if !u.watching {
 		return fmt.Errorf("flagz: not watching")
 	}
-	u.watchStop <- true
+	u.logger.Printf("flagz: stopping")
+	u.cancel()
 	return nil
 }
 
 func (u *Updater) readAllFlags() error {
-	resp, err := u.client.Get(u.etcdPath, /* sort */
-		true, /* recursive */
-		true)
+	resp, err := u.etcdKeys.Get(u.context, u.etcdPath, &etcd.GetOptions{Recursive: true, Sort: true})
 	if err != nil {
 		return err
 	}
-	u.lastEtcdIndex = resp.EtcdIndex
+	u.lastIndex = resp.Index
 	errorStrings := []string{}
 	for _, node := range resp.Node.Nodes {
 		if node.Dir {
@@ -120,22 +131,26 @@ func (u *Updater) watchForUpdates() error {
 	// We need to implement our own watcher because the one in go-etcd doesn't handle errorcode 400 and 401.
 	// See https://github.com/coreos/etcd/blob/master/Documentation/errorcode.md
 	// And https://coreos.com/etcd/docs/2.0.8/api.html#waiting-for-a-change
+	watcher := u.etcdKeys.Watcher(u.etcdPath, &etcd.WatcherOptions{AfterIndex: u.lastIndex, Recursive: true})
+	u.logger.Printf("flagz: watcher started")
 	for u.watching {
-		resp, err := u.client.Watch(
-			u.etcdPath,
-			u.lastEtcdIndex+1,
-			/*recursive*/
-			true,
-			/* recvChan*/
-			nil,
-			/* stopChan */
-			u.watchStop)
-		if etcdErr, ok := err.(etcd.EtcdError); ok && etcdErr.ErrorCode == errorEventIndexCleared {
+		resp, err := watcher.Next(u.context)
+		if etcdErr, ok := err.(etcd.Error); ok && etcdErr.Code == etcd.ErrorCodeEventIndexCleared {
 			// Our index is out of the Etcd Log. Reread everything and reset index.
 			u.logger.Printf("flagz: handling Etcd Index error by re-reading everything: %v", err)
 			time.Sleep(200 * time.Millisecond)
 			u.readAllFlags()
+			watcher = u.etcdKeys.Watcher(u.etcdPath, &etcd.WatcherOptions{AfterIndex: u.lastIndex, Recursive: true})
 			continue
+		} else if clusterErr, ok := err.(*etcd.ClusterError); ok {
+			// https://github.com/coreos/etcd/issues/3209
+			if len(clusterErr.Errors) > 0 && clusterErr.Errors[0] == context.Canceled {
+				break
+			} else {
+				u.logger.Printf("flagz: etcd ClusterError. Will retry. %v", clusterErr.Detail())
+				time.Sleep(100 * time.Millisecond)
+				continue
+			}
 		} else if err != nil {
 			u.logger.Printf("flagz: wicked etcd error. Restarting watching after some time. %v", err)
 			// Etcd started dropping watchers, or is re-electing. Give it some time.
@@ -143,7 +158,7 @@ func (u *Updater) watchForUpdates() error {
 			time.Sleep(1*time.Second + time.Duration(randOffsetMs)*time.Millisecond)
 			continue
 		}
-		u.lastEtcdIndex = resp.Node.ModifiedIndex
+		u.lastIndex = resp.Node.ModifiedIndex
 		if resp.Node.Dir {
 			u.logger.Printf("flagz: ignoring directory %v", resp.Node.Key)
 			continue
@@ -154,7 +169,7 @@ func (u *Updater) watchForUpdates() error {
 		}
 		value := resp.Node.Value
 		if value == "" {
-			u.logger.Printf("flagz: ignoring action=%v on flag=%v at etcdindex=%v", flagName, u.lastEtcdIndex)
+			u.logger.Printf("flagz: ignoring action=%v on flag=%v at etcdindex=%v", flagName, u.lastIndex)
 			continue
 		}
 		err = u.flagSet.Set(flagName, value)
@@ -162,9 +177,10 @@ func (u *Updater) watchForUpdates() error {
 			u.logger.Printf("flagz: failed updating flag=%v, because of: %v", flagName, err)
 			u.rollbackEtcdValue(flagName, resp)
 		} else {
-			u.logger.Printf("flagz: updated flag=%v to value=%v at etcdindex=%v", flagName, value, u.lastEtcdIndex)
+			u.logger.Printf("flagz: updated flag=%v to value=%v at etcdindex=%v", flagName, value, u.lastIndex)
 		}
 	}
+	u.logger.Printf("flagz: watcher exited")
 	return nil
 }
 
@@ -172,24 +188,11 @@ func (u *Updater) rollbackEtcdValue(flagName string, resp *etcd.Response) {
 	var err error
 	if resp.PrevNode != nil {
 		// It's just a new value that's wrong, roll back to prevNode value atomically.
-		_, err = u.client.CompareAndSwap(
-			resp.Node.Key,
-			resp.PrevNode.Value,
-			/*ttl*/
-			0,
-			/* prevValue */
-			"",
-			u.lastEtcdIndex)
-
+		_, err = u.etcdKeys.Set(u.context, resp.Node.Key, resp.PrevNode.Value, &etcd.SetOptions{PrevIndex: u.lastIndex})
 	} else {
-		// This was a create and the value is botched. Delete it.
-		_, err = u.client.CompareAndDelete(
-			resp.Node.Key,
-			/* prevValue */
-			"",
-			u.lastEtcdIndex)
+		_, err = u.etcdKeys.Delete(u.context, resp.Node.Key, &etcd.DeleteOptions{PrevIndex: u.lastIndex})
 	}
-	if etcdErr, ok := err.(etcd.EtcdError); ok && etcdErr.ErrorCode == preconditionFailed {
+	if etcdErr, ok := err.(etcd.Error); ok && etcdErr.Code == etcd.ErrorCodeTestFailed {
 		// Someone probably rolled it back in the mean time.
 		u.logger.Printf("flagz: rolled back flag=%v was changed by someone else. All good.", flagName)
 	} else if err != nil {

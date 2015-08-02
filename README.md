@@ -15,7 +15,7 @@ Dynamic configuration allows for fast iteration cycles, and provides valuable fl
  * Your service is getting overloaded and you want to disable certain costly features, and you can't afford 
  restarting because you'd lose important capacity.
  
-All of these unformly across a shard of your services. Of course with great power comes great responsibility :)
+All of these uniformly across a shard of your services. Of course with great power comes great responsibility :)
 
 ## How?
 
@@ -41,8 +41,6 @@ that you'll use throughout to declare your flags. Then:
 In case of errors (parsing, disallowed values) flagz will atomically roll back the bad state in etcd.
 
 # Status
-
-This is a proof of concept. Integration tests pending.
 
 Features planned:
  
