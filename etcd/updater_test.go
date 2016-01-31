@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	updater "github.com/mwitkow-io/go-flagz/etcd"
-	"github.com/mwitkow-io/go-flagz/test_etcd"
+	updater "github.com/mwitkow/go-flagz/etcd"
+	"github.com/mwitkow/go-flagz/test_etcd"
 
 	"github.com/Sirupsen/logrus"
 	etcd "github.com/coreos/etcd/client"
