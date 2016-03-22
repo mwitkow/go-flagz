@@ -122,7 +122,7 @@ func (u *Updater) readAllFlags() error {
 	}
 	if len(errorStrings) > 0 {
 		return fmt.Errorf("flagz: encountered %d errors while parsing flags from etcd: \n  %v",
-			strings.Join(errorStrings, "\n"))
+			len(errorStrings), strings.Join(errorStrings, "\n"))
 	}
 	return nil
 }
@@ -143,14 +143,14 @@ func (u *Updater) watchForUpdates() error {
 			watcher = u.etcdKeys.Watcher(u.etcdPath, &etcd.WatcherOptions{AfterIndex: u.lastIndex, Recursive: true})
 			continue
 		} else if clusterErr, ok := err.(*etcd.ClusterError); ok {
-			// https://github.com/coreos/etcd/issues/3209
-			if len(clusterErr.Errors) > 0 && clusterErr.Errors[0] == context.Canceled {
-				break
-			} else {
-				u.logger.Printf("flagz: etcd ClusterError. Will retry. %v", clusterErr.Detail())
-				time.Sleep(100 * time.Millisecond)
-				continue
-			}
+			u.logger.Printf("flagz: etcd ClusterError. Will retry. %v", clusterErr.Detail())
+			time.Sleep(100 * time.Millisecond)
+			continue
+		} else if err == context.DeadlineExceeded {
+			u.logger.Printf("flagz: deadline exceeded which watching for changes, continuing watching")
+			continue
+		} else if err == context.Canceled {
+			break
 		} else if err != nil {
 			u.logger.Printf("flagz: wicked etcd error. Restarting watching after some time. %v", err)
 			// Etcd started dropping watchers, or is re-electing. Give it some time.

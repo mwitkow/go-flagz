@@ -7,7 +7,7 @@ import (
 	"time"
 
 	updater "github.com/mwitkow/go-flagz/etcd"
-	"github.com/mwitkow/go-flagz/test_etcd"
+	"github.com/mwitkow/go-etcd-harness"
 
 	"github.com/Sirupsen/logrus"
 	etcd "github.com/coreos/etcd/client"
@@ -22,7 +22,6 @@ const (
 
 var (
 	logger = logrus.StandardLogger()
-	ctxNil = context.Background()
 )
 
 // Define the suite, and absorb the built-in basic suite
@@ -37,8 +36,8 @@ type UpdaterTestSuite struct {
 
 // Clean up the etcd state before each test.
 func (s *UpdaterTestSuite) SetupTest() {
-	s.keys.Delete(ctxNil, prefix, &etcd.DeleteOptions{Dir: true, Recursive: true})
-	_, err := s.keys.Set(ctxNil, prefix, "", &etcd.SetOptions{Dir: true})
+	s.keys.Delete(newCtx(), prefix, &etcd.DeleteOptions{Dir: true, Recursive: true})
+	_, err := s.keys.Set(newCtx(), prefix, "", &etcd.SetOptions{Dir: true})
 	if err != nil {
 		s.T().Fatalf("cannot create empty dir %v: %v", prefix, err)
 	}
@@ -50,14 +49,14 @@ func (s *UpdaterTestSuite) SetupTest() {
 }
 
 func (s *UpdaterTestSuite) setFlagzValue(flagzName string, value string) {
-	_, err := s.keys.Set(ctxNil, prefix+flagzName, value, &etcd.SetOptions{})
+	_, err := s.keys.Set(newCtx(), prefix+flagzName, value, &etcd.SetOptions{})
 	if err != nil {
 		s.T().Fatalf("failed setting flagz value: %v")
 	}
 }
 
 func (s *UpdaterTestSuite) getFlagzValue(flagzName string) string {
-	resp, err := s.keys.Get(ctxNil, prefix+flagzName, &etcd.GetOptions{})
+	resp, err := s.keys.Get(newCtx(), prefix+flagzName, &etcd.GetOptions{})
 	if err != nil {
 		s.T().Fatalf("failed getting flagz value: %v")
 	}
@@ -145,16 +144,16 @@ func (s *UpdaterTestSuite) Test_DynamicUpdateRestoresGoodState() {
 }
 
 func TestUpdaterSuite(t *testing.T) {
-	server, err := test_etcd.New(os.Stderr)
+	harness, err := etcd_harness.New(os.Stderr)
 	if err != nil {
 		t.Fatalf("failed starting test server: %v", err)
 	}
-	t.Logf("will use etcd test endpoint: %v", server.Endpoint)
+	t.Logf("will use etcd test endpoint: %v", harness.Endpoint)
 	defer func() {
-		server.Stop()
+		harness.Stop()
 		t.Logf("cleaned up etcd test server")
 	}()
-	suite.Run(t, &UpdaterTestSuite{keys: etcd.NewKeysAPI(server.Client)})
+	suite.Run(t, &UpdaterTestSuite{keys: etcd.NewKeysAPI(harness.Client)})
 }
 
 type assertFunc func(T assert.TestingT, expected, actual interface{}, msgAndArgs ...interface{}) bool
@@ -171,6 +170,11 @@ func eventually(T *testing.T, duration time.Duration,
 		}
 	}
 	T.FailNow()
+}
+
+func newCtx() context.Context {
+	c, _ := context.WithTimeout(context.TODO(), 50 * time.Millisecond)
+	return c
 }
 
 // Abstraction that allows us to pass the *testing.T as a logger to the updater.
