@@ -4,7 +4,6 @@ import "github.com/spf13/pflag"
 
 const(
 	dynamicMarker = "__is_dynamic"
-
 )
 
 

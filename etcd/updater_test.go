@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/net/context"
 	"github.com/mwitkow/go-flagz"
+``	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -52,14 +53,16 @@ func (s *UpdaterTestSuite) SetupTest() {
 func (s *UpdaterTestSuite) setFlagzValue(flagzName string, value string) {
 	_, err := s.keys.Set(newCtx(), prefix+flagzName, value, &etcd.SetOptions{})
 	if err != nil {
-		s.T().Fatalf("failed setting flagz value: %v")
+		s.T().Fatalf("failed setting flagz value: %v", err)
 	}
+	s.T().Logf("test has set flag=%v to value %v", flagzName, value)
 }
 
 func (s *UpdaterTestSuite) getFlagzValue(flagzName string) string {
 	resp, err := s.keys.Get(newCtx(), prefix+flagzName, &etcd.GetOptions{})
 	if err != nil {
-		s.T().Fatalf("failed getting flagz value: %v")
+		s.T().Logf("failed getting flagz value: %v", err)
+		return ""
 	}
 	return resp.Node.Value
 }
@@ -80,50 +83,56 @@ func (s *UpdaterTestSuite) Test_SetsInitialValues() {
 	someInt := flagz.DynInt64(s.flagSet, "someint", 1337, "some int usage")
 	someString := flagz.DynString(s.flagSet, "somestring", "initial_value", "some int usage")
 	anotherString := flagz.DynString(s.flagSet, "anotherstring", "default_value", "some int usage")
+	normalString := s.flagSet.String("normalstring", "default_value", "some int usage")
+
 	s.setFlagzValue("someint", "2015")
 	s.setFlagzValue("somestring", "changed_value")
-	s.Require().NoError(s.updater.Initialize())
+	s.setFlagzValue("normalstring", "changed_value2")
 
-	s.Require().Equal(int64(2015), someInt.Get(), "int flag should change value")
-	s.Require().Equal("changed_value", someString.Get(), "string flag should change value")
-	s.Require().Equal("default_value", anotherString.Get(), "anotherstring should be unchanged")
+	require.NoError(s.T(), s.updater.Initialize())
+
+	assert.Equal(s.T(), int64(2015), someInt.Get(), "int flag should change value")
+	assert.Equal(s.T(), "changed_value", someString.Get(), "string flag should change value")
+	assert.Equal(s.T(), "default_value", anotherString.Get(), "anotherstring should be unchanged")
+	assert.Equal(s.T(), "changed_value2", *normalString, "anotherstring should be unchanged")
+
 }
 
 func (s *UpdaterTestSuite) Test_DynamicUpdate() {
 	someInt := flagz.DynInt64(s.flagSet, "someint", 1337, "some int usage")
-	s.Require().NoError(s.updater.Initialize())
-	s.Require().NoError(s.updater.Start())
-	s.Require().Equal(int64(1337), someInt.Get(), "int flag should not change value")
+	require.NoError(s.T(), s.updater.Initialize())
+	require.NoError(s.T(), s.updater.Start())
+	require.Equal(s.T(), int64(1337), someInt.Get(), "int flag should not change value")
 	s.setFlagzValue("someint", "2014")
 	eventually(s.T(), 1*time.Second,
-		assert.Equal, int64(2014),
+		assert.ObjectsAreEqualValues, int64(2014),
 		func() interface{} { return someInt.Get() },
-		"someint value should change")
+		"someint value should change to 2014")
 	s.setFlagzValue("someint", "2015")
 	eventually(s.T(), 1*time.Second,
-		assert.Equal, int64(2015),
+		assert.ObjectsAreEqualValues, 2015,
 		func() interface{} { return someInt.Get() },
-		"someint value should change")
+		"someint value should change to 2015")
 	s.setFlagzValue("someint", "2016")
 	eventually(s.T(), 1*time.Second,
-		assert.Equal, int64(2016),
+		assert.ObjectsAreEqualValues, int64(2016),
 		func() interface{} { return someInt.Get() },
-		"someint value should change")
+		"someint value should change to 2016")
 }
 
 func (s *UpdaterTestSuite) Test_DynamicUpdateRestoresGoodState() {
 	someInt := flagz.DynInt64(s.flagSet, "someint", 1337, "some int usage")
 	someFloat := flagz.DynFloat64(s.flagSet, "somefloat", 1.337, "some int usage")
 	s.setFlagzValue("someint", "2015")
-	s.Require().NoError(s.updater.Initialize())
-	s.Require().NoError(s.updater.Start())
-	s.Require().Equal(int64(2015), someInt.Get(), "int flag should change value")
-	s.Require().Equal(float64(1.337), someFloat.Get(), "float flag should not change value")
+	require.NoError(s.T(), s.updater.Initialize())
+	require.NoError(s.T(), s.updater.Start())
+	require.EqualValues(s.T(), 2015, someInt.Get(), "int flag should change value")
+	require.EqualValues(s.T(), 1.337, someFloat.Get(), "float flag should not change value")
 
 	// Bad update causing a rollback.
 	s.setFlagzValue("someint", "randombleh")
 	eventually(s.T(), 1*time.Second,
-		assert.Equal,
+		assert.ObjectsAreEqualValues,
 		"2015",
 		func() interface{} {
 			return s.getFlagzValue("someint")
@@ -134,14 +143,54 @@ func (s *UpdaterTestSuite) Test_DynamicUpdateRestoresGoodState() {
 	s.setFlagzValue("someint", "2016")
 	s.setFlagzValue("somefloat", "3.14")
 	eventually(s.T(), 1*time.Second,
-		assert.Equal, int64(2016),
+		assert.ObjectsAreEqualValues, int64(2016),
 		func() interface{} { return someInt.Get() },
 		"someint value should change, after rolled back")
 	eventually(s.T(), 1*time.Second,
-		assert.Equal, float64(3.14),
+		assert.ObjectsAreEqualValues, float64(3.14),
 		func() interface{} { return someFloat.Get() },
 		"somefloat value should change")
 
+}
+
+func (s *UpdaterTestSuite) Test_DynamicUpdate_WroteBadSubdirectory() {
+	someInt := flagz.DynInt64(s.flagSet, "someint", 1337, "some int usage")
+	require.NoError(s.T(), s.updater.Initialize())
+	require.NoError(s.T(), s.updater.Start())
+
+	s.setFlagzValue("subdir1/subdir2/leaf", "randombleh")
+	eventually(s.T(), 1*time.Second, assert.ObjectsAreEqualValues, nil,
+		func() interface{} {
+			_, err := s.keys.Get(newCtx(), prefix+"subdir1/subdir2/leaf", &etcd.GetOptions{})
+			return err
+		},
+		"mistaken subdirectories are left in tact")
+
+	s.setFlagzValue("someint", "7331")
+	eventually(s.T(), 1*time.Second, assert.ObjectsAreEqualValues, 7331,
+		func() interface{} { return someInt.Get() },
+		"writing a bad directory shouldn't inhibit the watcher")
+}
+
+func (s *UpdaterTestSuite) Test_DynamicUpdate_DoesntUpdateNonDynamicFlags() {
+	someInt := flagz.DynInt64(s.flagSet, "someint", 1337, "some int usage")
+	someString := s.flagSet.String("somestring", "initial_value", "some int usage")
+
+	require.NoError(s.T(), s.updater.Initialize())
+	require.NoError(s.T(), s.updater.Start())
+
+	// This write must not make it to someString until another .Initialize is called.
+	s.setFlagzValue("somestring", "newvalue")
+
+	s.setFlagzValue("someint", "7331")
+	eventually(s.T(), 1*time.Second, assert.ObjectsAreEqualValues, 7331,
+		func() interface{} { return someInt.Get() },
+		"the dynamic someint write that acts as a barrier, must succeed")
+	assert.EqualValues(s.T(), "initial_value", *someString, "somestring must not be overwritten dynamically")
+
+	eventually(s.T(), 1*time.Second, assert.ObjectsAreEqualValues, "newvalue",
+		func() interface{} { return s.getFlagzValue("somestring")},
+		"the non-dynamic somestring shouldnt affect the values in etcd")
 }
 
 func TestUpdaterSuite(t *testing.T) {
@@ -157,20 +206,20 @@ func TestUpdaterSuite(t *testing.T) {
 	suite.Run(t, &UpdaterTestSuite{keys: etcd.NewKeysAPI(harness.Client)})
 }
 
-type assertFunc func(T assert.TestingT, expected, actual interface{}, msgAndArgs ...interface{}) bool
+type assertFunc func( expected, actual interface{}) bool
 type getter func() interface{}
 
 // eventually tries a given Assert function 5 times over the period of time.
-func eventually(T *testing.T, duration time.Duration,
-	af assertFunc, expected interface{}, actual getter, msgAndArgs ...interface{}) {
+func eventually(t *testing.T, duration time.Duration,
+	af assertFunc, expected interface{}, actual getter, msgFmt string, msgArgs ...interface{}) {
 	increment := duration / 5
 	for i := 0; i < 5; i++ {
 		time.Sleep(increment)
-		if af(T, expected, actual(), msgAndArgs...) {
+		if af(expected, actual()) {
 			return
 		}
 	}
-	T.FailNow()
+	t.Fatalf(msgFmt, msgArgs...)
 }
 
 func newCtx() context.Context {

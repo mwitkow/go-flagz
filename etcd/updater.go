@@ -1,4 +1,4 @@
-// Updaterof Go "flags"-compatible data base on dynamic etcd watches.
+// Updater of Go "flags"-compatible data base on dynamic etcd watches.
 //
 // Copyright 2015 Michal Witkowski. All Rights Reserved.
 //
@@ -26,13 +26,21 @@ import (
 
 	"github.com/coreos/etcd/Godeps/_workspace/src/golang.org/x/net/context"
 	etcd "github.com/coreos/etcd/client"
+	"github.com/spf13/pflag"
+	"github.com/mwitkow/go-flagz"
+)
+
+
+var(
+	errNoValue = fmt.Errorf("no value in Node")
+	errFlagNotDynamic = fmt.Errorf("flag is not dynamic")
 )
 
 // Controls the auto updating process of a "flags"-compatible package from Etcd.
 type Updater struct {
 	client    etcd.Client
 	etcdKeys  etcd.KeysAPI
-	flagSet   flagSet
+	flagSet   *pflag.FlagSet
 	logger    logger
 	etcdPath  string
 	lastIndex uint64
@@ -41,19 +49,16 @@ type Updater struct {
 	cancel    context.CancelFunc
 }
 
-// Minimum interface needed to support dynamic flags.
-// As implemented by "flag" and "spf13/pflag".
-type flagSet interface {
-	Set(name, value string) error
-}
-
 // Minimum logger interface needed.
 // Default "log" and "logrus" should support these.
 type logger interface {
 	Printf(format string, v ...interface{})
 }
 
-func New(set flagSet, keysApi etcd.KeysAPI, etcdPath string, logger logger) (*Updater, error) {
+func New(set *pflag.FlagSet, keysApi etcd.KeysAPI, etcdPath string, logger logger) (*Updater, error) {
+	if !strings.HasSuffix(etcdPath, "/") {
+		etcdPath = etcdPath + "/"
+	}
 	u := &Updater{
 		flagSet:   set,
 		etcdKeys:  keysApi,
@@ -71,7 +76,7 @@ func (u *Updater) Initialize() error {
 	if u.lastIndex != 0 {
 		return fmt.Errorf("flagz: already initialized.")
 	}
-	return u.readAllFlags()
+	return u.readAllFlags(/* onlyDynamic */ false)
 }
 
 // Starts the auto-updating go-routine.
@@ -97,7 +102,7 @@ func (u *Updater) Stop() error {
 	return nil
 }
 
-func (u *Updater) readAllFlags() error {
+func (u *Updater) readAllFlags(onlyDynamic bool) error {
 	resp, err := u.etcdKeys.Get(u.context, u.etcdPath, &etcd.GetOptions{Recursive: true, Sort: true})
 	if err != nil {
 		return err
@@ -105,19 +110,13 @@ func (u *Updater) readAllFlags() error {
 	u.lastIndex = resp.Index
 	errorStrings := []string{}
 	for _, node := range resp.Node.Nodes {
-		if node.Dir {
-			u.logger.Printf("flagz: ignoring subdirectory %v", node.Key)
+		flagName, err := u.nodeToFlagName(node)
+		if err != nil {
+			u.logger.Printf("flagz: ignoring: %v", err)
 			continue
 		}
-		flagName, err := keyToFlag(node.Key)
-		if err != nil {
+		if err := u.setFlag(flagName, node.Value, onlyDynamic); err != nil && err != errNoValue {
 			errorStrings = append(errorStrings, err.Error())
-		}
-		if node.Value != "" {
-			err := u.flagSet.Set(flagName, node.Value)
-			if err != nil {
-				errorStrings = append(errorStrings, err.Error())
-			}
 		}
 	}
 	if len(errorStrings) > 0 {
@@ -125,6 +124,20 @@ func (u *Updater) readAllFlags() error {
 			len(errorStrings), strings.Join(errorStrings, "\n"))
 	}
 	return nil
+}
+
+func (u *Updater) setFlag(flagName string, value string, onlyDynamic bool) error {
+	if value == "" {
+		return errNoValue
+	}
+	flag := u.flagSet.Lookup(flagName)
+	if flag == nil {
+		return fmt.Errorf("flag=%v was not found", flagName)
+	}
+	if onlyDynamic && !flagz.IsFlagDynamic(flag) {
+		return errFlagNotDynamic
+	}
+	return flag.Value.Set(value)
 }
 
 func (u *Updater) watchForUpdates() error {
@@ -139,7 +152,7 @@ func (u *Updater) watchForUpdates() error {
 			// Our index is out of the Etcd Log. Reread everything and reset index.
 			u.logger.Printf("flagz: handling Etcd Index error by re-reading everything: %v", err)
 			time.Sleep(200 * time.Millisecond)
-			u.readAllFlags()
+			u.readAllFlags(/* onlyDynamic */ true)
 			watcher = u.etcdKeys.Watcher(u.etcdPath, &etcd.WatcherOptions{AfterIndex: u.lastIndex, Recursive: true})
 			continue
 		} else if clusterErr, ok := err.(*etcd.ClusterError); ok {
@@ -159,25 +172,22 @@ func (u *Updater) watchForUpdates() error {
 			continue
 		}
 		u.lastIndex = resp.Node.ModifiedIndex
-		if resp.Node.Dir {
-			u.logger.Printf("flagz: ignoring directory %v", resp.Node.Key)
-			continue
-		}
-		flagName, err := keyToFlag(resp.Node.Key)
+		flagName, err := u.nodeToFlagName(resp.Node)
 		if err != nil {
+			u.logger.Printf("flagz: ignoring %v at etcdindex=%v", err, u.lastIndex)
 			continue
 		}
-		value := resp.Node.Value
-		if value == "" {
-			u.logger.Printf("flagz: ignoring action=%v on flag=%v at etcdindex=%v", flagName, u.lastIndex)
+		err = u.setFlag(flagName, resp.Node.Value, /*onlyDynamic*/ true)
+		if err == errNoValue {
+			u.logger.Printf("flagz: ignoring action=%v on flag=%v at etcdindex=%v", resp.Action, flagName, u.lastIndex)
 			continue
-		}
-		err = u.flagSet.Set(flagName, value)
-		if err != nil {
-			u.logger.Printf("flagz: failed updating flag=%v, because of: %v", flagName, err)
+		} else if err == errFlagNotDynamic {
+			u.logger.Printf("flagz: ignoring updating flag=%v at etcdindex=%v, because of: %v", flagName, u.lastIndex, err)
+		} else if err != nil {
+			u.logger.Printf("flagz: failed updating flag=%v at etcdindex=%v, because of: %v", flagName, u.lastIndex, err)
 			u.rollbackEtcdValue(flagName, resp)
 		} else {
-			u.logger.Printf("flagz: updated flag=%v to value=%v at etcdindex=%v", flagName, value, u.lastIndex)
+			u.logger.Printf("flagz: updated flag=%v to value=%v at etcdindex=%v", flagName, resp.Node.Value, u.lastIndex)
 		}
 	}
 	u.logger.Printf("flagz: watcher exited")
@@ -202,11 +212,18 @@ func (u *Updater) rollbackEtcdValue(flagName string, resp *etcd.Response) {
 	}
 }
 
-func keyToFlag(etcdKey string) (string, error) {
-	parts := strings.Split(etcdKey, "/")
-	if len(parts) <= 1 {
-		return "", fmt.Errorf("flagz: can't extract flagName")
+
+func (u *Updater) nodeToFlagName(node *etcd.Node) (string, error) {
+	if node.Dir {
+		return "", fmt.Errorf("key '%v' is a directory entry", node.Key)
 	}
-	name := parts[len(parts)-1]
-	return name, nil
+	if !strings.HasPrefix(node.Key, u.etcdPath) {
+		return "", fmt.Errorf("key '%v' doesn't start with etcd path '%v'", node.Key, u.etcdPath)
+	}
+	truncated := strings.TrimPrefix(node.Key, u.etcdPath)
+	if strings.Count(truncated, "/") > 0 {
+		return "", fmt.Errorf("key '%v' isn't a direct leaf of etcd path '%v'", node.Key, u.etcdPath)
+	}
+	return truncated, nil
 }
+
