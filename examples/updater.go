@@ -2,11 +2,12 @@ package main
 
 import (
 	"flag"
-	log "github.com/Sirupsen/logrus"
-	etcd "github.com/coreos/etcd/client"
-	flagz_etcd "github.com/mwitkow-io/go-flagz/etcd"
+	"log"
 	"os"
 	"time"
+
+	etcd "github.com/coreos/etcd/client"
+	flagz_etcd "github.com/mwitkow-io/go-flagz/etcd"
 )
 
 var (
@@ -18,24 +19,26 @@ var (
 
 func main() {
 	myFlagSet.Parse(os.Args[1:])
-	logger := log.New()
+	logger := log.New(os.Stderr, "updater", 0)
 
 	client, err := etcd.New(etcd.Config{Endpoints: []string{"http://localhost:2379"}})
 	if err != nil {
-		log.Fatalf("Failed setting up %v", err)
+		logger.Fatalf("Failed setting up %v", err)
 	}
-	updater, err := flagz_etcd.New(myFlagSet, etcd.KeysAPI(client), "/example/flagz", logger)
+	kapi := etcd.NewKeysAPI(client)
+
+	updater, err := flagz_etcd.New(myFlagSet, kapi, "/example/flagz", logger)
 	if err != nil {
-		log.Fatalf("Failed setting up %v", err)
+		logger.Fatalf("Failed setting up %v", err)
 	}
 	err = updater.Initialize()
 	if err != nil {
-		log.Fatalf("Failed setting up %v", err)
+		logger.Fatalf("Failed setting up %v", err)
 	}
 	updater.Start()
 
 	for true {
-		logger.Infof("someint: %v somestring: %v", *myInt, *myString)
+		logger.Printf("someint: %v somestring: %v", *myInt, *myString)
 		time.Sleep(1500 * time.Millisecond)
 	}
 }
