@@ -27,5 +27,5 @@ func TestDynInt64_FiresValidators(t *testing.T) {
 	DynInt64(set, "some_int_1", 13371337, "Use it or lose it").WithValidator(ValidateDynInt64Range(0, 2000))
 
 	assert.NoError(t, set.Set("some_int_1", "300"), "no error from validator when in range")
-	assert.NoError(t, set.Set("some_int_1", "2001"), "error from validator when value out of range")
+	assert.Error(t, set.Set("some_int_1", "2001"), "error from validator when value out of range")
 }
