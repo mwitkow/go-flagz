@@ -29,3 +29,23 @@ func TestDynInt64_FiresValidators(t *testing.T) {
 	assert.NoError(t, set.Set("some_int_1", "300"), "no error from validator when in range")
 	assert.Error(t, set.Set("some_int_1", "2001"), "error from validator when value out of range")
 }
+
+func Benchmark_Int64_Dyn_Get(b *testing.B) {
+	set := flag.NewFlagSet("foobar", flag.ContinueOnError)
+	value := DynInt64(set, "some_int_1", 13371337, "Use it or lose it")
+	set.Set("some_int_1", "77007700")
+	for i := 0; i < b.N; i++ {
+		x := value.Get()
+		x = x + 1
+	}
+}
+
+func Benchmark_Int64_Dyn_Normal(b *testing.B) {
+	set := flag.NewFlagSet("foobar", flag.ContinueOnError)
+	valPtr := set.Int64("some_int_1", 13371337, "Use it or lose it")
+	set.Set("some_int_1", "77007700")
+	for i := 0; i < b.N; i++ {
+		x := *valPtr
+		x = x + 1
+	}
+}
