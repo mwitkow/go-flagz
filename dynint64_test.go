@@ -40,7 +40,7 @@ func Benchmark_Int64_Dyn_Get(b *testing.B) {
 	}
 }
 
-func Benchmark_Int64_Dyn_Normal(b *testing.B) {
+func Benchmark_Int64_Normal_Get(b *testing.B) {
 	set := flag.NewFlagSet("foobar", flag.ContinueOnError)
 	valPtr := set.Int64("some_int_1", 13371337, "Use it or lose it")
 	set.Set("some_int_1", "77007700")
