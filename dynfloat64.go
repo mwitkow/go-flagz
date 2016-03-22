@@ -1,4 +1,4 @@
-package go_flagz
+package flagz
 
 import (
 	"fmt"

@@ -1,4 +1,4 @@
-package go_flagz
+package flagz
 
 import "github.com/spf13/pflag"
 

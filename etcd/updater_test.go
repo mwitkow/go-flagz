@@ -1,19 +1,20 @@
 package etcd_test
 
 import (
-	"flag"
 	"os"
 	"testing"
 	"time"
 
 	updater "github.com/mwitkow/go-flagz/etcd"
 	"github.com/mwitkow/go-etcd-harness"
+	flag "github.com/spf13/pflag"
 
 	"github.com/Sirupsen/logrus"
 	etcd "github.com/coreos/etcd/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/net/context"
+	"github.com/mwitkow/go-flagz"
 )
 
 const (
@@ -70,54 +71,54 @@ func (s *UpdaterTestSuite) TearDownTest() {
 }
 
 func (s *UpdaterTestSuite) Test_ErrorsOnInitialUnknownFlag() {
-	s.flagSet.Int("someint", 1337, "some int usage")
+	flagz.DynInt64(s.flagSet, "someint", 1337, "some int usage")
 	s.setFlagzValue("anotherint", "999")
 	s.Require().Error(s.updater.Initialize(), "initialize should complain about unknown flag")
 }
 
 func (s *UpdaterTestSuite) Test_SetsInitialValues() {
-	someInt := s.flagSet.Int("someint", 1337, "some int usage")
-	someString := s.flagSet.String("somestring", "initial_value", "some int usage")
-	anotherString := s.flagSet.String("anotherstring", "default_value", "some int usage")
+	someInt := flagz.DynInt64(s.flagSet, "someint", 1337, "some int usage")
+	someString := flagz.DynString(s.flagSet, "somestring", "initial_value", "some int usage")
+	anotherString := flagz.DynString(s.flagSet, "anotherstring", "default_value", "some int usage")
 	s.setFlagzValue("someint", "2015")
 	s.setFlagzValue("somestring", "changed_value")
 	s.Require().NoError(s.updater.Initialize())
 
-	s.Require().Equal(2015, *someInt, "int flag should change value")
-	s.Require().Equal("changed_value", *someString, "string flag should change value")
-	s.Require().Equal("default_value", *anotherString, "anotherstring should be unchanged")
+	s.Require().Equal(int64(2015), someInt.Get(), "int flag should change value")
+	s.Require().Equal("changed_value", someString.Get(), "string flag should change value")
+	s.Require().Equal("default_value", anotherString.Get(), "anotherstring should be unchanged")
 }
 
 func (s *UpdaterTestSuite) Test_DynamicUpdate() {
-	someInt := s.flagSet.Int("someint", 1337, "some int usage")
+	someInt := flagz.DynInt64(s.flagSet, "someint", 1337, "some int usage")
 	s.Require().NoError(s.updater.Initialize())
 	s.Require().NoError(s.updater.Start())
-	s.Require().Equal(1337, *someInt, "int flag should not change value")
+	s.Require().Equal(int64(1337), someInt.Get(), "int flag should not change value")
 	s.setFlagzValue("someint", "2014")
 	eventually(s.T(), 1*time.Second,
-		assert.Equal, 2014,
-		func() interface{} { return *someInt },
+		assert.Equal, int64(2014),
+		func() interface{} { return someInt.Get() },
 		"someint value should change")
 	s.setFlagzValue("someint", "2015")
 	eventually(s.T(), 1*time.Second,
-		assert.Equal, 2015,
-		func() interface{} { return *someInt },
+		assert.Equal, int64(2015),
+		func() interface{} { return someInt.Get() },
 		"someint value should change")
 	s.setFlagzValue("someint", "2016")
 	eventually(s.T(), 1*time.Second,
-		assert.Equal, 2016,
-		func() interface{} { return *someInt },
+		assert.Equal, int64(2016),
+		func() interface{} { return someInt.Get() },
 		"someint value should change")
 }
 
 func (s *UpdaterTestSuite) Test_DynamicUpdateRestoresGoodState() {
-	someInt := s.flagSet.Int("someint", 1337, "some int usage")
-	someFloat := s.flagSet.Float64("somefloat", 1.337, "some int usage")
+	someInt := flagz.DynInt64(s.flagSet, "someint", 1337, "some int usage")
+	someFloat := flagz.DynFloat64(s.flagSet, "somefloat", 1.337, "some int usage")
 	s.setFlagzValue("someint", "2015")
 	s.Require().NoError(s.updater.Initialize())
 	s.Require().NoError(s.updater.Start())
-	s.Require().Equal(2015, *someInt, "int flag should change value")
-	s.Require().Equal(1.337, *someFloat, "float flag should not change value")
+	s.Require().Equal(int64(2015), someInt.Get(), "int flag should change value")
+	s.Require().Equal(float64(1.337), someFloat.Get(), "float flag should not change value")
 
 	// Bad update causing a rollback.
 	s.setFlagzValue("someint", "randombleh")
@@ -133,12 +134,12 @@ func (s *UpdaterTestSuite) Test_DynamicUpdateRestoresGoodState() {
 	s.setFlagzValue("someint", "2016")
 	s.setFlagzValue("somefloat", "3.14")
 	eventually(s.T(), 1*time.Second,
-		assert.Equal, 2016,
-		func() interface{} { return *someInt },
+		assert.Equal, int64(2016),
+		func() interface{} { return someInt.Get() },
 		"someint value should change, after rolled back")
 	eventually(s.T(), 1*time.Second,
-		assert.Equal, 3.14,
-		func() interface{} { return *someFloat },
+		assert.Equal, float64(3.14),
+		func() interface{} { return someFloat.Get() },
 		"somefloat value should change")
 
 }
