@@ -3,7 +3,7 @@
 
 // Package etcd provides an updater for go "flags"-compatible FlagSets based on dynamic changes in etcd storage.
 
-package etcd
+package watcher
 
 import (
 	"fmt"
@@ -23,12 +23,12 @@ var(
 	errFlagNotDynamic = fmt.Errorf("flag is not dynamic")
 )
 
-// Controls the auto updating process of a "flags"-compatible package from Etcd.
-type Updater struct {
+// Watcher syncs updates from etcd into a given FlagSet.
+type Watcher struct {
 	client    etcd.Client
 	etcdKeys  etcd.KeysAPI
 	flagSet   *pflag.FlagSet
-	logger    logger
+	logger    loggerCompatible
 	etcdPath  string
 	lastIndex uint64
 	watching  bool
@@ -38,15 +38,16 @@ type Updater struct {
 
 // Minimum logger interface needed.
 // Default "log" and "logrus" should support these.
-type logger interface {
+type loggerCompatible interface {
 	Printf(format string, v ...interface{})
 }
 
-func New(set *pflag.FlagSet, keysApi etcd.KeysAPI, etcdPath string, logger logger) (*Updater, error) {
+// New constructs a new Watcher
+func New(set *pflag.FlagSet, keysApi etcd.KeysAPI, etcdPath string, logger loggerCompatible) (*Watcher, error) {
 	if !strings.HasSuffix(etcdPath, "/") {
 		etcdPath = etcdPath + "/"
 	}
-	u := &Updater{
+	u := &Watcher{
 		flagSet:   set,
 		etcdKeys:  keysApi,
 		etcdPath:  etcdPath,
@@ -58,16 +59,16 @@ func New(set *pflag.FlagSet, keysApi etcd.KeysAPI, etcdPath string, logger logge
 	return u, nil
 }
 
-// Performs the initial read of etcd for all flags and updates the specified FlagSet.
-func (u *Updater) Initialize() error {
+// Initialize performs the initial read of etcd and sets all flags (dynamic and static) into FlagSet.
+func (u *Watcher) Initialize() error {
 	if u.lastIndex != 0 {
 		return fmt.Errorf("flagz: already initialized.")
 	}
 	return u.readAllFlags(/* onlyDynamic */ false)
 }
 
-// Starts the auto-updating go-routine.
-func (u *Updater) Start() error {
+// Start kicks off the go routine that syncs dynamic flags from etcd to FlagSet.
+func (u *Watcher) Start() error {
 	if u.lastIndex == 0 {
 		return fmt.Errorf("flagz: not initialized")
 	}
@@ -80,7 +81,7 @@ func (u *Updater) Start() error {
 }
 
 // Stops the auto-updating go-routine.
-func (u *Updater) Stop() error {
+func (u *Watcher) Stop() error {
 	if !u.watching {
 		return fmt.Errorf("flagz: not watching")
 	}
@@ -89,7 +90,7 @@ func (u *Updater) Stop() error {
 	return nil
 }
 
-func (u *Updater) readAllFlags(onlyDynamic bool) error {
+func (u *Watcher) readAllFlags(onlyDynamic bool) error {
 	resp, err := u.etcdKeys.Get(u.context, u.etcdPath, &etcd.GetOptions{Recursive: true, Sort: true})
 	if err != nil {
 		return err
@@ -113,7 +114,7 @@ func (u *Updater) readAllFlags(onlyDynamic bool) error {
 	return nil
 }
 
-func (u *Updater) setFlag(flagName string, value string, onlyDynamic bool) error {
+func (u *Watcher) setFlag(flagName string, value string, onlyDynamic bool) error {
 	if value == "" {
 		return errNoValue
 	}
@@ -127,7 +128,7 @@ func (u *Updater) setFlag(flagName string, value string, onlyDynamic bool) error
 	return flag.Value.Set(value)
 }
 
-func (u *Updater) watchForUpdates() error {
+func (u *Watcher) watchForUpdates() error {
 	// We need to implement our own watcher because the one in go-etcd doesn't handle errorcode 400 and 401.
 	// See https://github.com/coreos/etcd/blob/master/Documentation/errorcode.md
 	// And https://coreos.com/etcd/docs/2.0.8/api.html#waiting-for-a-change
@@ -181,7 +182,7 @@ func (u *Updater) watchForUpdates() error {
 	return nil
 }
 
-func (u *Updater) rollbackEtcdValue(flagName string, resp *etcd.Response) {
+func (u *Watcher) rollbackEtcdValue(flagName string, resp *etcd.Response) {
 	var err error
 	if resp.PrevNode != nil {
 		// It's just a new value that's wrong, roll back to prevNode value atomically.
@@ -200,7 +201,7 @@ func (u *Updater) rollbackEtcdValue(flagName string, resp *etcd.Response) {
 }
 
 
-func (u *Updater) nodeToFlagName(node *etcd.Node) (string, error) {
+func (u *Watcher) nodeToFlagName(node *etcd.Node) (string, error) {
 	if node.Dir {
 		return "", fmt.Errorf("key '%v' is a directory entry", node.Key)
 	}

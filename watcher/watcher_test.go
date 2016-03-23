@@ -1,7 +1,7 @@
 // Copyright 2015 Michal Witkowski. All Rights Reserved.
 // See LICENSE for licensing terms.
 
-package etcd_test
+package watcher_test
 
 import (
 	"os"
@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/mwitkow/go-etcd-harness"
-	updater "github.com/mwitkow/go-flagz/etcd"
+	watcher "github.com/mwitkow/go-flagz/watcher"
 	flag "github.com/spf13/pflag"
 
 	"github.com/Sirupsen/logrus"
@@ -31,29 +31,29 @@ var (
 
 // Define the suite, and absorb the built-in basic suite
 // functionality from testify - including assertion methods.
-type UpdaterTestSuite struct {
+type watcherTestSuite struct {
 	suite.Suite
 	keys etcd.KeysAPI
 
 	flagSet *flag.FlagSet
-	updater *updater.Updater
+	watcher *watcher.Watcher
 }
 
 // Clean up the etcd state before each test.
-func (s *UpdaterTestSuite) SetupTest() {
+func (s *watcherTestSuite) SetupTest() {
 	s.keys.Delete(newCtx(), prefix, &etcd.DeleteOptions{Dir: true, Recursive: true})
 	_, err := s.keys.Set(newCtx(), prefix, "", &etcd.SetOptions{Dir: true})
 	if err != nil {
 		s.T().Fatalf("cannot create empty dir %v: %v", prefix, err)
 	}
 	s.flagSet = flag.NewFlagSet("updater_test", flag.ContinueOnError)
-	s.updater, err = updater.New(s.flagSet, s.keys, prefix, &testingLog{T: s.T()})
+	s.watcher, err = watcher.New(s.flagSet, s.keys, prefix, &testingLog{T: s.T()})
 	if err != nil {
 		s.T().Fatalf("cannot create updater: %v", err)
 	}
 }
 
-func (s *UpdaterTestSuite) setFlagzValue(flagzName string, value string) {
+func (s *watcherTestSuite) setFlagzValue(flagzName string, value string) {
 	_, err := s.keys.Set(newCtx(), prefix+flagzName, value, &etcd.SetOptions{})
 	if err != nil {
 		s.T().Fatalf("failed setting flagz value: %v", err)
@@ -61,7 +61,7 @@ func (s *UpdaterTestSuite) setFlagzValue(flagzName string, value string) {
 	s.T().Logf("test has set flag=%v to value %v", flagzName, value)
 }
 
-func (s *UpdaterTestSuite) getFlagzValue(flagzName string) string {
+func (s *watcherTestSuite) getFlagzValue(flagzName string) string {
 	resp, err := s.keys.Get(newCtx(), prefix+flagzName, &etcd.GetOptions{})
 	if err != nil {
 		s.T().Logf("failed getting flagz value: %v", err)
@@ -71,18 +71,18 @@ func (s *UpdaterTestSuite) getFlagzValue(flagzName string) string {
 }
 
 // Tear down the updater
-func (s *UpdaterTestSuite) TearDownTest() {
-	s.updater.Stop()
+func (s *watcherTestSuite) TearDownTest() {
+	s.watcher.Stop()
 	time.Sleep(100 * time.Millisecond)
 }
 
-func (s *UpdaterTestSuite) Test_ErrorsOnInitialUnknownFlag() {
+func (s *watcherTestSuite) Test_ErrorsOnInitialUnknownFlag() {
 	flagz.DynInt64(s.flagSet, "someint", 1337, "some int usage")
 	s.setFlagzValue("anotherint", "999")
-	s.Require().Error(s.updater.Initialize(), "initialize should complain about unknown flag")
+	s.Require().Error(s.watcher.Initialize(), "initialize should complain about unknown flag")
 }
 
-func (s *UpdaterTestSuite) Test_SetsInitialValues() {
+func (s *watcherTestSuite) Test_SetsInitialValues() {
 	someInt := flagz.DynInt64(s.flagSet, "someint", 1337, "some int usage")
 	someString := flagz.DynString(s.flagSet, "somestring", "initial_value", "some int usage")
 	anotherString := flagz.DynString(s.flagSet, "anotherstring", "default_value", "some int usage")
@@ -92,7 +92,7 @@ func (s *UpdaterTestSuite) Test_SetsInitialValues() {
 	s.setFlagzValue("somestring", "changed_value")
 	s.setFlagzValue("normalstring", "changed_value2")
 
-	require.NoError(s.T(), s.updater.Initialize())
+	require.NoError(s.T(), s.watcher.Initialize())
 
 	assert.Equal(s.T(), int64(2015), someInt.Get(), "int flag should change value")
 	assert.Equal(s.T(), "changed_value", someString.Get(), "string flag should change value")
@@ -101,10 +101,10 @@ func (s *UpdaterTestSuite) Test_SetsInitialValues() {
 
 }
 
-func (s *UpdaterTestSuite) Test_DynamicUpdate() {
+func (s *watcherTestSuite) Test_DynamicUpdate() {
 	someInt := flagz.DynInt64(s.flagSet, "someint", 1337, "some int usage")
-	require.NoError(s.T(), s.updater.Initialize())
-	require.NoError(s.T(), s.updater.Start())
+	require.NoError(s.T(), s.watcher.Initialize())
+	require.NoError(s.T(), s.watcher.Start())
 	require.Equal(s.T(), int64(1337), someInt.Get(), "int flag should not change value")
 	s.setFlagzValue("someint", "2014")
 	eventually(s.T(), 1*time.Second,
@@ -123,12 +123,12 @@ func (s *UpdaterTestSuite) Test_DynamicUpdate() {
 		"someint value should change to 2016")
 }
 
-func (s *UpdaterTestSuite) Test_DynamicUpdateRestoresGoodState() {
+func (s *watcherTestSuite) Test_DynamicUpdateRestoresGoodState() {
 	someInt := flagz.DynInt64(s.flagSet, "someint", 1337, "some int usage")
 	someFloat := flagz.DynFloat64(s.flagSet, "somefloat", 1.337, "some int usage")
 	s.setFlagzValue("someint", "2015")
-	require.NoError(s.T(), s.updater.Initialize())
-	require.NoError(s.T(), s.updater.Start())
+	require.NoError(s.T(), s.watcher.Initialize())
+	require.NoError(s.T(), s.watcher.Start())
 	require.EqualValues(s.T(), 2015, someInt.Get(), "int flag should change value")
 	require.EqualValues(s.T(), 1.337, someFloat.Get(), "float flag should not change value")
 
@@ -156,10 +156,10 @@ func (s *UpdaterTestSuite) Test_DynamicUpdateRestoresGoodState() {
 
 }
 
-func (s *UpdaterTestSuite) Test_DynamicUpdate_WroteBadSubdirectory() {
+func (s *watcherTestSuite) Test_DynamicUpdate_WroteBadSubdirectory() {
 	someInt := flagz.DynInt64(s.flagSet, "someint", 1337, "some int usage")
-	require.NoError(s.T(), s.updater.Initialize())
-	require.NoError(s.T(), s.updater.Start())
+	require.NoError(s.T(), s.watcher.Initialize())
+	require.NoError(s.T(), s.watcher.Start())
 
 	s.setFlagzValue("subdir1/subdir2/leaf", "randombleh")
 	eventually(s.T(), 1*time.Second, assert.ObjectsAreEqualValues, nil,
@@ -175,12 +175,12 @@ func (s *UpdaterTestSuite) Test_DynamicUpdate_WroteBadSubdirectory() {
 		"writing a bad directory shouldn't inhibit the watcher")
 }
 
-func (s *UpdaterTestSuite) Test_DynamicUpdate_DoesntUpdateNonDynamicFlags() {
+func (s *watcherTestSuite) Test_DynamicUpdate_DoesntUpdateNonDynamicFlags() {
 	someInt := flagz.DynInt64(s.flagSet, "someint", 1337, "some int usage")
 	someString := s.flagSet.String("somestring", "initial_value", "some int usage")
 
-	require.NoError(s.T(), s.updater.Initialize())
-	require.NoError(s.T(), s.updater.Start())
+	require.NoError(s.T(), s.watcher.Initialize())
+	require.NoError(s.T(), s.watcher.Start())
 
 	// This write must not make it to someString until another .Initialize is called.
 	s.setFlagzValue("somestring", "newvalue")
@@ -206,7 +206,7 @@ func TestUpdaterSuite(t *testing.T) {
 		harness.Stop()
 		t.Logf("cleaned up etcd test server")
 	}()
-	suite.Run(t, &UpdaterTestSuite{keys: etcd.NewKeysAPI(harness.Client)})
+	suite.Run(t, &watcherTestSuite{keys: etcd.NewKeysAPI(harness.Client)})
 }
 
 type assertFunc func(expected, actual interface{}) bool

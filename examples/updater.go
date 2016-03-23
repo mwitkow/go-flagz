@@ -1,12 +1,13 @@
 package main
 
 import (
-	"flag"
-	log "github.com/Sirupsen/logrus"
-	etcd "github.com/coreos/etcd/client"
-	flagz_etcd "github.com/mwitkow-io/go-flagz/etcd"
 	"os"
 	"time"
+
+	log "github.com/Sirupsen/logrus"
+	etcd "github.com/coreos/etcd/client"
+	"github.com/mwitkow/go-flagz/watcher"
+	flag "github.com/spf13/pflag"
 )
 
 var (
@@ -24,15 +25,15 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed setting up %v", err)
 	}
-	updater, err := flagz_etcd.New(myFlagSet, etcd.KeysAPI(client), "/example/flagz", logger)
+	w, err := watcher.New(myFlagSet, etcd.NewKeysAPI(client), "/example/flagz", logger)
 	if err != nil {
 		log.Fatalf("Failed setting up %v", err)
 	}
-	err = updater.Initialize()
+	err = w.Initialize()
 	if err != nil {
 		log.Fatalf("Failed setting up %v", err)
 	}
-	updater.Start()
+	w.Start()
 
 	for true {
 		logger.Infof("someint: %v somestring: %v", *myInt, *myString)
