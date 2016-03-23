@@ -1,11 +1,15 @@
+// Copyright 2015 Michal Witkowski. All Rights Reserved.
+// See LICENSE for licensing terms.
+
 package flagz
 
 import (
 	"fmt"
-	"github.com/spf13/pflag"
 	"regexp"
 	"sync/atomic"
 	"unsafe"
+
+	"github.com/spf13/pflag"
 )
 
 func DynString(flagSet *pflag.FlagSet, name string, value string, usage string) *DynStringValue {

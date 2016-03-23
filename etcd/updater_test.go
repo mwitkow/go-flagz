@@ -1,3 +1,6 @@
+// Copyright 2015 Michal Witkowski. All Rights Reserved.
+// See LICENSE for licensing terms.
+
 package etcd_test
 
 import (
@@ -5,17 +8,17 @@ import (
 	"testing"
 	"time"
 
-	updater "github.com/mwitkow/go-flagz/etcd"
 	"github.com/mwitkow/go-etcd-harness"
+	updater "github.com/mwitkow/go-flagz/etcd"
 	flag "github.com/spf13/pflag"
 
 	"github.com/Sirupsen/logrus"
 	etcd "github.com/coreos/etcd/client"
+	"github.com/mwitkow/go-flagz"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/net/context"
-	"github.com/mwitkow/go-flagz"
-``	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -189,7 +192,7 @@ func (s *UpdaterTestSuite) Test_DynamicUpdate_DoesntUpdateNonDynamicFlags() {
 	assert.EqualValues(s.T(), "initial_value", *someString, "somestring must not be overwritten dynamically")
 
 	eventually(s.T(), 1*time.Second, assert.ObjectsAreEqualValues, "newvalue",
-		func() interface{} { return s.getFlagzValue("somestring")},
+		func() interface{} { return s.getFlagzValue("somestring") },
 		"the non-dynamic somestring shouldnt affect the values in etcd")
 }
 
@@ -206,7 +209,7 @@ func TestUpdaterSuite(t *testing.T) {
 	suite.Run(t, &UpdaterTestSuite{keys: etcd.NewKeysAPI(harness.Client)})
 }
 
-type assertFunc func( expected, actual interface{}) bool
+type assertFunc func(expected, actual interface{}) bool
 type getter func() interface{}
 
 // eventually tries a given Assert function 5 times over the period of time.
@@ -223,7 +226,7 @@ func eventually(t *testing.T, duration time.Duration,
 }
 
 func newCtx() context.Context {
-	c, _ := context.WithTimeout(context.TODO(), 50 * time.Millisecond)
+	c, _ := context.WithTimeout(context.TODO(), 50*time.Millisecond)
 	return c
 }
 

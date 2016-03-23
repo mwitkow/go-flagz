@@ -1,13 +1,17 @@
+// Copyright 2015 Michal Witkowski. All Rights Reserved.
+// See LICENSE for licensing terms.
+
 package flagz
 
 import (
 	"testing"
+
 	flag "github.com/spf13/pflag"
 
-	"github.com/stretchr/testify/assert"
 	"regexp"
-)
 
+	"github.com/stretchr/testify/assert"
+)
 
 func TestDynString_SetAndGet(t *testing.T) {
 	set := flag.NewFlagSet("foobar", flag.ContinueOnError)

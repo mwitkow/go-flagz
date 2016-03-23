@@ -1,10 +1,14 @@
+// Copyright 2015 Michal Witkowski. All Rights Reserved.
+// See LICENSE for licensing terms.
+
 package flagz
 
 import (
 	"fmt"
-	"github.com/spf13/pflag"
 	"sync/atomic"
 	"time"
+
+	"github.com/spf13/pflag"
 )
 
 func DynDuration(flagSet *pflag.FlagSet, name string, value time.Duration, usage string) *DynDurationValue {

@@ -1,11 +1,13 @@
+// Copyright 2015 Michal Witkowski. All Rights Reserved.
+// See LICENSE for licensing terms.
+
 package flagz
 
 import "github.com/spf13/pflag"
 
-const(
+const (
 	dynamicMarker = "__is_dynamic"
 )
-
 
 func setFlagDynamic(flag *pflag.Flag) {
 	if flag.Annotations == nil {

@@ -1,12 +1,15 @@
+// Copyright 2015 Michal Witkowski. All Rights Reserved.
+// See LICENSE for licensing terms.
+
 package flagz
 
 import (
 	"fmt"
 	"strconv"
 	"sync/atomic"
+
 	"github.com/spf13/pflag"
 )
-
 
 func DynInt64(flagSet *pflag.FlagSet, name string, value int64, usage string) *DynInt64Value {
 	dynValue := &DynInt64Value{ptr: &value}
@@ -50,11 +53,10 @@ func (d *DynInt64Value) String() string {
 	return fmt.Sprintf("%v", d.Get())
 }
 
-
 // ValidateDynInt64Range returns a validator function that checks if the flag value is in range.
-func ValidateDynInt64Range(fromInclusive int64, toInclusive int64) func (int64) error {
+func ValidateDynInt64Range(fromInclusive int64, toInclusive int64) func(int64) error {
 	return func(value int64) error {
-		if value > toInclusive || value < fromInclusive{
+		if value > toInclusive || value < fromInclusive {
 			return fmt.Errorf("value %v not in [%v, %v] range", value, fromInclusive, toInclusive)
 		}
 		return nil
