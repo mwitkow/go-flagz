@@ -1,14 +1,14 @@
+// Copyright 2015 Michal Witkowski. All Rights Reserved.
+// See LICENSE for licensing terms.
+
 package main
 
 import (
-	"flag"
 	"log"
-	etcd "github.com/coreos/etcd/client"
-	flagz_etcd "github.com/mwitkow-io/go-flagz/etcd"
+
 	"os"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	etcd "github.com/coreos/etcd/client"
 	"github.com/mwitkow/go-flagz/watcher"
 	flag "github.com/spf13/pflag"
