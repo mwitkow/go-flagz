@@ -13,6 +13,8 @@ import (
 	"github.com/spf13/pflag"
 )
 
+// DynStringSlice creates a `Flag` that represents `[]string` which is safe to change dynamically at runtime.
+// Unlike `pflag.StringSlice`, consecutive sets don't append to the slice, but override it.
 func DynStringSlice(flagSet *pflag.FlagSet, name string, value []string, usage string) *DynStringSliceValue {
 	dynValue := &DynStringSliceValue{ptr: unsafe.Pointer(&value)}
 	flag := flagSet.VarPF(dynValue, name, "", usage)
@@ -20,11 +22,22 @@ func DynStringSlice(flagSet *pflag.FlagSet, name string, value []string, usage s
 	return dynValue
 }
 
+// DynStringSliceValue is a flag-related `time.Duration` value wrapper.
 type DynStringSliceValue struct {
 	ptr       unsafe.Pointer
 	validator func([]string) error
 }
 
+// Get retrieves the value in a thread-safe manner.
+func (d *DynStringSliceValue) Get() []string {
+	p := (*[]string)(atomic.LoadPointer(&d.ptr))
+	return *p
+}
+
+// Set updates the value from a string representation in a thread-safe manner.
+// This operation may return an error if the provided `input` doesn't parse, or the resulting value doesn't pass an
+// optional validator.
+// If a notifier is set on the value, it will be invoked in a separate go-routine.
 func (d *DynStringSliceValue) Set(val string) error {
 	v, err := csv.NewReader(strings.NewReader(val)).Read()
 	if err != nil {
@@ -39,19 +52,19 @@ func (d *DynStringSliceValue) Set(val string) error {
 	return nil
 }
 
+// WithValidator adds a function that checks values before they're set.
+// Any error returned by the validator will lead to the value being rejected.
+// Validators are executed on the same go-routine as the call to `Set`.
 func (d *DynStringSliceValue) WithValidator(validator func([]string) error) {
 	d.validator = validator
 }
 
+// Type is an indicator of what this flag represents.
 func (d *DynStringSliceValue) Type() string {
 	return "dyn_stringslice"
 }
 
-func (d *DynStringSliceValue) Get() []string {
-	p := (*[]string)(atomic.LoadPointer(&d.ptr))
-	return *p
-}
-
+// String represents the canonical representation of the type.
 func (d *DynStringSliceValue) String() string {
 	return fmt.Sprintf("%v", d.Get())
 }
