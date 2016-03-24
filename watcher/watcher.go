@@ -1,7 +1,7 @@
 // Copyright 2015 Michal Witkowski. All Rights Reserved.
 // See LICENSE for licensing terms.
 
-// Package etcd provides an updater for go "flags"-compatible FlagSets based on dynamic changes in etcd storage.
+// Package watcher provides an etcd-backed Watcher for syncing FlagSet state with etcd.
 
 package watcher
 
@@ -44,6 +44,7 @@ type loggerCompatible interface {
 
 // New constructs a new Watcher
 func New(set *pflag.FlagSet, keysApi etcd.KeysAPI, etcdPath string, logger loggerCompatible) (*Watcher, error) {
+	set.
 	if !strings.HasSuffix(etcdPath, "/") {
 		etcdPath = etcdPath + "/"
 	}
