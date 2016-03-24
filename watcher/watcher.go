@@ -126,7 +126,8 @@ func (u *Watcher) setFlag(flagName string, value string, onlyDynamic bool) error
 	if onlyDynamic && !flagz.IsFlagDynamic(flag) {
 		return errFlagNotDynamic
 	}
-	return flag.Value.Set(value)
+	// do not call flag.Value.Set, instead go through flagSet.Set to change "changed" state.
+	return u.flagSet.Set(flagName, value)
 }
 
 func (u *Watcher) watchForUpdates() error {
