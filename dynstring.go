@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/pflag"
 )
 
+// DynString creates a `Flag` that represents `string` which is safe to change dynamically at runtime.
 func DynString(flagSet *pflag.FlagSet, name string, value string, usage string) *DynStringValue {
 	dynValue := &DynStringValue{ptr: unsafe.Pointer(&value)}
 	flag := flagSet.VarPF(dynValue, name, "", usage)
@@ -19,11 +20,22 @@ func DynString(flagSet *pflag.FlagSet, name string, value string, usage string) 
 	return dynValue
 }
 
+// DynStringValue is a flag-related `time.Duration` value wrapper.
 type DynStringValue struct {
 	ptr       unsafe.Pointer
 	validator func(string) error
 }
 
+// Get retrieves the value in a thread-safe manner.
+func (d *DynStringValue) Get() string {
+	p := (*string)(atomic.LoadPointer(&d.ptr))
+	return *p
+}
+
+// Set updates the value from a string representation in a thread-safe manner.
+// This operation may return an error if the provided `input` doesn't parse, or the resulting value doesn't pass an
+// optional validator.
+// If a notifier is set on the value, it will be invoked in a separate go-routine.
 func (d *DynStringValue) Set(val string) error {
 	if d.validator != nil {
 		if err := d.validator(val); err != nil {
@@ -34,19 +46,19 @@ func (d *DynStringValue) Set(val string) error {
 	return nil
 }
 
+// WithValidator adds a function that checks values before they're set.
+// Any error returned by the validator will lead to the value being rejected.
+// Validators are executed on the same go-routine as the call to `Set`.
 func (d *DynStringValue) WithValidator(validator func(string) error) {
 	d.validator = validator
 }
 
+// Type is an indicator of what this flag represents.
 func (d *DynStringValue) Type() string {
 	return "dyn_string"
 }
 
-func (d *DynStringValue) Get() string {
-	p := (*string)(atomic.LoadPointer(&d.ptr))
-	return *p
-}
-
+// String represents the canonical representation of the type.
 func (d *DynStringValue) String() string {
 	return fmt.Sprintf("%v", d.Get())
 }
