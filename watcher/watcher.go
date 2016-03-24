@@ -44,7 +44,6 @@ type loggerCompatible interface {
 
 // New constructs a new Watcher
 func New(set *pflag.FlagSet, keysApi etcd.KeysAPI, etcdPath string, logger loggerCompatible) (*Watcher, error) {
-	set.
 	if !strings.HasSuffix(etcdPath, "/") {
 		etcdPath = etcdPath + "/"
 	}
