@@ -1,7 +1,7 @@
 // Copyright 2015 Michal Witkowski. All Rights Reserved.
 // See LICENSE for licensing terms.
 
-// Package etcd provides an updater for go "flags"-compatible FlagSets based on dynamic changes in etcd storage.
+// Package watcher provides an etcd-backed Watcher for syncing FlagSet state with etcd.
 
 package watcher
 
@@ -125,7 +125,8 @@ func (u *Watcher) setFlag(flagName string, value string, onlyDynamic bool) error
 	if onlyDynamic && !flagz.IsFlagDynamic(flag) {
 		return errFlagNotDynamic
 	}
-	return flag.Value.Set(value)
+	// do not call flag.Value.Set, instead go through flagSet.Set to change "changed" state.
+	return u.flagSet.Set(flagName, value)
 }
 
 func (u *Watcher) watchForUpdates() error {

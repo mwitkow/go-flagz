@@ -4,7 +4,6 @@
 package flagz
 
 import (
-	"fmt"
 	"sync/atomic"
 	"unsafe"
 
