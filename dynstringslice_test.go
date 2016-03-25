@@ -8,6 +8,8 @@ import (
 
 	flag "github.com/spf13/pflag"
 
+	"time"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -32,4 +34,22 @@ func TestDynStringSlice_FiresValidators(t *testing.T) {
 
 	assert.NoError(t, set.Set("some_stringslice_1", "car,far"), "no error from validator when in range")
 	assert.Error(t, set.Set("some_stringslice_1", "car"), "error from validator when value out of range")
+}
+
+func TestDynStringSlice_FiresNotifier(t *testing.T) {
+	waitCh := make(chan bool, 1)
+	notifier := func(oldVal []string, newVal []string) {
+		assert.EqualValues(t, []string{"foo", "bar"}, oldVal, "old value in notify must match previous value")
+		assert.EqualValues(t, []string{"car", "far"}, newVal, "new value in notify must match set value")
+		waitCh <- true
+	}
+
+	set := flag.NewFlagSet("foobar", flag.ContinueOnError)
+	DynStringSlice(set, "some_stringslice_1", []string{"foo", "bar"}, "Use it or lose it").WithNotifier(notifier)
+	set.Set("some_stringslice_1", "car,far")
+	select {
+	case <-time.After(5 * time.Millisecond):
+		assert.Fail(t, "failed to trigger notifier")
+	case <-waitCh:
+	}
 }

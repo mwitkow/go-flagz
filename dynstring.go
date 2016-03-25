@@ -24,6 +24,7 @@ func DynString(flagSet *pflag.FlagSet, name string, value string, usage string) 
 type DynStringValue struct {
 	ptr       unsafe.Pointer
 	validator func(string) error
+	notifier  func(oldValue string, newValue string)
 }
 
 // Get retrieves the value in a thread-safe manner.
@@ -42,7 +43,10 @@ func (d *DynStringValue) Set(val string) error {
 			return err
 		}
 	}
-	atomic.StorePointer(&d.ptr, unsafe.Pointer(&val))
+	oldPtr := atomic.SwapPointer(&d.ptr, unsafe.Pointer(&val))
+	if d.notifier != nil {
+		go d.notifier(*(*string)(oldPtr), val)
+	}
 	return nil
 }
 
@@ -51,6 +55,12 @@ func (d *DynStringValue) Set(val string) error {
 // Validators are executed on the same go-routine as the call to `Set`.
 func (d *DynStringValue) WithValidator(validator func(string) error) {
 	d.validator = validator
+}
+
+// WithNotifier adds a function is called every time a new value is successfully set.
+// Each notifier is executed in a new go-routine.
+func (d *DynStringValue) WithNotifier(notifier func(oldValue string, newValue string)) {
+	d.notifier = notifier
 }
 
 // Type is an indicator of what this flag represents.

@@ -32,13 +32,12 @@ type DynJSONValue struct {
 	structType reflect.Type
 	ptr        unsafe.Pointer
 	validator  func(interface{}) error
+	notifier   func(oldValue interface{}, newValue interface{})
 }
 
 // Get retrieves the value in its original JSON struct type in a thread-safe manner.
 func (d *DynJSONValue) Get() interface{} {
-	p := atomic.LoadPointer(&d.ptr)
-	n := reflect.NewAt(d.structType, p)
-	return n.Interface()
+	return d.unsafeToStoredType(atomic.LoadPointer(&d.ptr))
 }
 
 // Set updates the value from a string representation in a thread-safe manner.
@@ -55,7 +54,10 @@ func (d *DynJSONValue) Set(input string) error {
 			return err
 		}
 	}
-	atomic.StorePointer(&d.ptr, unsafe.Pointer(reflect.ValueOf(someStruct).Pointer()))
+	oldPtr := atomic.SwapPointer(&d.ptr, unsafe.Pointer(reflect.ValueOf(someStruct).Pointer()))
+	if d.notifier != nil {
+		go d.notifier(d.unsafeToStoredType(oldPtr), someStruct)
+	}
 	return nil
 }
 
@@ -64,6 +66,12 @@ func (d *DynJSONValue) Set(input string) error {
 // Validators are executed on the same go-routine as the call to `Set`.
 func (d *DynJSONValue) WithValidator(validator func(interface{}) error) {
 	d.validator = validator
+}
+
+// WithNotifier adds a function is called every time a new value is successfully set.
+// Each notifier is executed in a new go-routine.
+func (d *DynJSONValue) WithNotifier(notifier func(oldValue interface{}, newValue interface{})) {
+	d.notifier = notifier
 }
 
 // Type is an indicator of what this flag represents.
@@ -88,4 +96,9 @@ func (d *DynJSONValue) String() string {
 		return "ERR"
 	}
 	return string(out)
+}
+
+func (d *DynJSONValue) unsafeToStoredType(p unsafe.Pointer) interface{} {
+	n := reflect.NewAt(d.structType, p)
+	return n.Interface()
 }

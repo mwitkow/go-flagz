@@ -10,6 +10,8 @@ import (
 
 	"fmt"
 
+	"time"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -61,6 +63,24 @@ func TestDynJSON_FiresValidators(t *testing.T) {
 
 	assert.NoError(t, set.Set("some_json_1", `{"ints": [42], "string":"bar"}`), "no error from validator when inputo k")
 	assert.Error(t, set.Set("some_json_1", `{"ints": [42]}`), "error from validator when value out of range")
+}
+
+func TestDynJSON_FiresNotifier(t *testing.T) {
+	waitCh := make(chan bool, 1)
+	notifier := func(oldVal interface{}, newVal interface{}) {
+		assert.EqualValues(t, defaultJson, oldVal, "old value in notify must match previous value")
+		assert.EqualValues(t, &outerJson{FieldInts: []int{42}, FieldString: "bar"}, newVal, "new value in notify must match set value")
+		waitCh <- true
+	}
+
+	set := flag.NewFlagSet("foobar", flag.ContinueOnError)
+	DynJSON(set, "some_json_1", defaultJson, "Use it or lose it").WithNotifier(notifier)
+	set.Set("some_json_1", `{"ints": [42], "string":"bar"}`)
+	select {
+	case <-time.After(5 * time.Millisecond):
+		assert.Fail(t, "failed to trigger notifier")
+	case <-waitCh:
+	}
 }
 
 type outerJson struct {
