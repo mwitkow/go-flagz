@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/coreos/etcd/Godeps/_workspace/src/golang.org/x/net/context"
+	"golang.org/x/net/context"
 	etcd "github.com/coreos/etcd/client"
 	"github.com/mwitkow/go-flagz"
 	flag "github.com/spf13/pflag"
@@ -144,6 +144,11 @@ func (u *Watcher) watchForUpdates() error {
 			watcher = u.etcdKeys.Watcher(u.etcdPath, &etcd.WatcherOptions{AfterIndex: u.lastIndex, Recursive: true})
 			continue
 		} else if clusterErr, ok := err.(*etcd.ClusterError); ok {
+			// https://github.com/coreos/etcd/issues/3209
+			if len(clusterErr.Errors) > 0 && clusterErr.Errors[0] == context.Canceled {
+				// same as context.Cancelled case below.
+				break
+			}
 			u.logger.Printf("flagz: etcd ClusterError. Will retry. %v", clusterErr.Detail())
 			time.Sleep(100 * time.Millisecond)
 			continue
