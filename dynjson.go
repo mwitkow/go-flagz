@@ -6,17 +6,16 @@ package flagz
 import (
 	"sync/atomic"
 	"unsafe"
-
 	"encoding/json"
 	"reflect"
 
-	"github.com/spf13/pflag"
+	flag "github.com/spf13/pflag"
 )
 
-// DynDuration creates a `Flag` that is backed by an arbitrary JSON which is safe to change dynamically at runtime.
+// DynJSON creates a `Flag` that is backed by an arbitrary JSON which is safe to change dynamically at runtime.
 // The `value` must be a pointer to a struct that is JSON (un)marshallable.
 // New values based on the default constructor of `value` type will be created on each update.
-func DynJSON(flagSet *pflag.FlagSet, name string, value interface{}, usage string) *DynJSONValue {
+func DynJSON(flagSet *flag.FlagSet, name string, value interface{}, usage string) *DynJSONValue {
 	reflectVal := reflect.ValueOf(value)
 	if reflectVal.Kind() != reflect.Ptr || reflectVal.Elem().Kind() != reflect.Struct {
 		panic("DynJSON value must be a pointer to a struct")

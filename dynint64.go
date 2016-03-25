@@ -8,18 +8,18 @@ import (
 	"strconv"
 	"sync/atomic"
 
-	"github.com/spf13/pflag"
+	flag "github.com/spf13/pflag"
 )
 
-// DynDuration creates a `Flag` that represents `int64` which is safe to change dynamically at runtime.
-func DynInt64(flagSet *pflag.FlagSet, name string, value int64, usage string) *DynInt64Value {
+// DynInt64 creates a `Flag` that represents `int64` which is safe to change dynamically at runtime.
+func DynInt64(flagSet *flag.FlagSet, name string, value int64, usage string) *DynInt64Value {
 	dynValue := &DynInt64Value{ptr: &value}
 	flag := flagSet.VarPF(dynValue, name, "", usage)
 	setFlagDynamic(flag)
 	return dynValue
 }
 
-// DynDurationValue is a flag-related `int64` value wrapper.
+// DynInt64Value is a flag-related `int64` value wrapper.
 type DynInt64Value struct {
 	ptr       *int64
 	validator func(int64) error

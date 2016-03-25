@@ -12,7 +12,6 @@ import (
 	watcher "github.com/mwitkow/go-flagz/watcher"
 	flag "github.com/spf13/pflag"
 
-	"github.com/Sirupsen/logrus"
 	etcd "github.com/coreos/etcd/client"
 	"github.com/mwitkow/go-flagz"
 	"github.com/stretchr/testify/assert"
@@ -23,10 +22,6 @@ import (
 
 const (
 	prefix = "/updater_test/"
-)
-
-var (
-	logger = logrus.StandardLogger()
 )
 
 // Define the suite, and absorb the built-in basic suite

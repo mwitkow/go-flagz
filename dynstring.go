@@ -9,11 +9,11 @@ import (
 	"sync/atomic"
 	"unsafe"
 
-	"github.com/spf13/pflag"
+	flag "github.com/spf13/pflag"
 )
 
 // DynString creates a `Flag` that represents `string` which is safe to change dynamically at runtime.
-func DynString(flagSet *pflag.FlagSet, name string, value string, usage string) *DynStringValue {
+func DynString(flagSet *flag.FlagSet, name string, value string, usage string) *DynStringValue {
 	dynValue := &DynStringValue{ptr: unsafe.Pointer(&value)}
 	flag := flagSet.VarPF(dynValue, name, "", usage)
 	setFlagDynamic(flag)

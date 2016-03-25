@@ -5,9 +5,7 @@ package main
 
 import (
 	"log"
-
 	"os"
-
 	"fmt"
 	"html/template"
 	"net/http"

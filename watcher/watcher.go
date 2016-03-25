@@ -13,13 +13,12 @@ import (
 
 	"github.com/coreos/etcd/Godeps/_workspace/src/golang.org/x/net/context"
 	etcd "github.com/coreos/etcd/client"
-	"github.com/spf13/pflag"
 	"github.com/mwitkow/go-flagz"
+	flag "github.com/spf13/pflag"
 )
 
-
-var(
-	errNoValue = fmt.Errorf("no value in Node")
+var (
+	errNoValue        = fmt.Errorf("no value in Node")
 	errFlagNotDynamic = fmt.Errorf("flag is not dynamic")
 )
 
@@ -27,7 +26,7 @@ var(
 type Watcher struct {
 	client    etcd.Client
 	etcdKeys  etcd.KeysAPI
-	flagSet   *pflag.FlagSet
+	flagSet   *flag.FlagSet
 	logger    loggerCompatible
 	etcdPath  string
 	lastIndex uint64
@@ -43,7 +42,7 @@ type loggerCompatible interface {
 }
 
 // New constructs a new Watcher
-func New(set *pflag.FlagSet, keysApi etcd.KeysAPI, etcdPath string, logger loggerCompatible) (*Watcher, error) {
+func New(set *flag.FlagSet, keysApi etcd.KeysAPI, etcdPath string, logger loggerCompatible) (*Watcher, error) {
 	if !strings.HasSuffix(etcdPath, "/") {
 		etcdPath = etcdPath + "/"
 	}
@@ -64,7 +63,7 @@ func (u *Watcher) Initialize() error {
 	if u.lastIndex != 0 {
 		return fmt.Errorf("flagz: already initialized.")
 	}
-	return u.readAllFlags(/* onlyDynamic */ false)
+	return u.readAllFlags( /* onlyDynamic */ false)
 }
 
 // Start kicks off the go routine that syncs dynamic flags from etcd to FlagSet.
@@ -141,7 +140,7 @@ func (u *Watcher) watchForUpdates() error {
 			// Our index is out of the Etcd Log. Reread everything and reset index.
 			u.logger.Printf("flagz: handling Etcd Index error by re-reading everything: %v", err)
 			time.Sleep(200 * time.Millisecond)
-			u.readAllFlags(/* onlyDynamic */ true)
+			u.readAllFlags( /* onlyDynamic */ true)
 			watcher = u.etcdKeys.Watcher(u.etcdPath, &etcd.WatcherOptions{AfterIndex: u.lastIndex, Recursive: true})
 			continue
 		} else if clusterErr, ok := err.(*etcd.ClusterError); ok {
@@ -166,7 +165,7 @@ func (u *Watcher) watchForUpdates() error {
 			u.logger.Printf("flagz: ignoring %v at etcdindex=%v", err, u.lastIndex)
 			continue
 		}
-		err = u.setFlag(flagName, resp.Node.Value, /*onlyDynamic*/ true)
+		err = u.setFlag(flagName, resp.Node.Value /*onlyDynamic*/, true)
 		if err == errNoValue {
 			u.logger.Printf("flagz: ignoring action=%v on flag=%v at etcdindex=%v", resp.Action, flagName, u.lastIndex)
 			continue
@@ -201,7 +200,6 @@ func (u *Watcher) rollbackEtcdValue(flagName string, resp *etcd.Response) {
 	}
 }
 
-
 func (u *Watcher) nodeToFlagName(node *etcd.Node) (string, error) {
 	if node.Dir {
 		return "", fmt.Errorf("key '%v' is a directory entry", node.Key)
@@ -215,4 +213,3 @@ func (u *Watcher) nodeToFlagName(node *etcd.Node) (string, error) {
 	}
 	return truncated, nil
 }
-

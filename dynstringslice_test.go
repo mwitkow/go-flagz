@@ -5,11 +5,9 @@ package flagz
 
 import (
 	"testing"
-
-	flag "github.com/spf13/pflag"
-
 	"time"
 
+	flag "github.com/spf13/pflag"
 	"github.com/stretchr/testify/assert"
 )
 

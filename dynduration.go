@@ -8,11 +8,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/spf13/pflag"
+	flag "github.com/spf13/pflag"
 )
 
 // DynDuration creates a `Flag` that represents `time.Duration` which is safe to change dynamically at runtime.
-func DynDuration(flagSet *pflag.FlagSet, name string, value time.Duration, usage string) *DynDurationValue {
+func DynDuration(flagSet *flag.FlagSet, name string, value time.Duration, usage string) *DynDurationValue {
 	dynValue := &DynDurationValue{ptr: (*int64)(&value)}
 	flag := flagSet.VarPF(dynValue, name, "", usage)
 	setFlagDynamic(flag)

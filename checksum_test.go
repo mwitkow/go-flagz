@@ -8,13 +8,13 @@ import (
 	"time"
 
 	"github.com/mwitkow/go-flagz"
-	"github.com/spf13/pflag"
+	flag "github.com/spf13/pflag"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestChecksumFlagSet_Differs(t *testing.T) {
-	set := pflag.NewFlagSet("foobar", pflag.ContinueOnError)
+	set := flag.NewFlagSet("foobar", flag.ContinueOnError)
 	flagz.DynDuration(set, "some_duration_1", 5*time.Second, "Use it or lose it")
 	flagz.DynInt64(set, "some_int_1", 13371337, "Use it or lose it")
 	set.String("static_string_1", "foobar", "meh")
@@ -44,8 +44,8 @@ func TestChecksumFlagSet_Differs(t *testing.T) {
 }
 
 func TestChecksumFlagSet_Filters(t *testing.T) {
-	filterOnlyDuration := func(flag *pflag.Flag) bool { return flag.Name == "some_duration_1" }
-	set := pflag.NewFlagSet("foobar", pflag.ContinueOnError)
+	filterOnlyDuration := func(f *flag.Flag) bool { return f.Name == "some_duration_1" }
+	set := flag.NewFlagSet("foobar", flag.ContinueOnError)
 	flagz.DynDuration(set, "some_duration_1", 5*time.Second, "Use it or lose it")
 	flagz.DynInt64(set, "some_int_1", 13371337, "Use it or lose it")
 

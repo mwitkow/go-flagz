@@ -6,31 +6,33 @@ package flagz
 import (
 	"log"
 	"net/http"
-
-	"github.com/spf13/pflag"
-
 	"encoding/json"
-
 	"bytes"
 	"strings"
 	"text/template"
+
+	flag "github.com/spf13/pflag"
 )
 
+// StatusEndpoint is a collection of `http.HandlerFunc` that serve debug pages about a given `FlagSet.
 type StatusEndpoint struct {
-	flagSet *pflag.FlagSet
+	flagSet *flag.FlagSet
 }
 
-func NewStatusEndpoint(flagSet *pflag.FlagSet) *StatusEndpoint {
+// NewStatusEndpoint creates a new debug `http.HandlerFunc` collection for a given `FlagSet`
+func NewStatusEndpoint(flagSet *flag.FlagSet) *StatusEndpoint {
 	return &StatusEndpoint{flagSet: flagSet}
 }
 
+// ListFlags provides an HTML and JSON `http.HandlerFunc` that lists all Flags of a `FlagSet`.
+// Additional URL query parameters can be used such as `type=[dynamic,static]` or `only_changed=true`.
 func (e *StatusEndpoint) ListFlags(resp http.ResponseWriter, req *http.Request) {
 	onlyChanged := req.URL.Query().Get("only_changed") != ""
 	onlyDynamic := req.URL.Query().Get("type") == "dynamic"
 	onlyStatic := req.URL.Query().Get("type") == "static"
 
-	listJson := &listJson{}
-	e.flagSet.VisitAll(func(f *pflag.Flag) {
+	flagSetJSON := &flagSetJSON{}
+	e.flagSet.VisitAll(func(f *flag.Flag) {
 		if onlyChanged && !f.Changed {
 			return
 		}
@@ -40,18 +42,18 @@ func (e *StatusEndpoint) ListFlags(resp http.ResponseWriter, req *http.Request) 
 		if onlyStatic && IsFlagDynamic(f) {
 			return
 		}
-		listJson.Flags = append(listJson.Flags, flagToJson(f))
+		flagSetJSON.Flags = append(flagSetJSON.Flags, flagToJSON(f))
 	})
 
 	if requestIsBrowser(req) && req.URL.Query().Get("format") != "json" {
 		resp.WriteHeader(http.StatusOK)
 		resp.Header().Add("Content-Type", "text/html")
-		if err := flagzListTemplate.Execute(resp, listJson); err != nil {
+		if err := flagzListTemplate.Execute(resp, flagSetJSON); err != nil {
 			log.Fatalf("Bad template evaluation: %v", err)
 		}
 	} else {
 		resp.Header().Add("Content-Type", "application/json")
-		out, err := json.MarshalIndent(&listJson, "", "  ")
+		out, err := json.MarshalIndent(&flagSetJSON, "", "  ")
 		if err != nil {
 			resp.WriteHeader(http.StatusInternalServerError)
 			return
@@ -118,11 +120,11 @@ var (
 `))
 )
 
-type listJson struct {
-	Flags []*flagJson `json:"flags"`
+type flagSetJSON struct {
+	Flags []*flagJSON `json:"flags"`
 }
 
-type flagJson struct {
+type flagJSON struct {
 	Name         string `json:"name"`
 	Description  string `json:"description"`
 	CurrentValue string `json:"current_value"`
@@ -132,8 +134,8 @@ type flagJson struct {
 	IsDynamic bool `json:"is_dynamic"`
 }
 
-func flagToJson(f *pflag.Flag) *flagJson {
-	fj := &flagJson{
+func flagToJSON(f *flag.Flag) *flagJSON {
+	fj := &flagJSON{
 		Name:         f.Name,
 		Description:  f.Usage,
 		CurrentValue: f.Value.String(),
@@ -142,13 +144,13 @@ func flagToJson(f *pflag.Flag) *flagJson {
 		IsDynamic:    IsFlagDynamic(f),
 	}
 	if strings.Contains(f.Value.Type(), "json") {
-		fj.CurrentValue = prettyPrintJson(fj.CurrentValue)
-		fj.DefaultValue = prettyPrintJson(fj.DefaultValue)
+		fj.CurrentValue = prettyPrintJSON(fj.CurrentValue)
+		fj.DefaultValue = prettyPrintJSON(fj.DefaultValue)
 	}
 	return fj
 }
 
-func prettyPrintJson(input string) string {
+func prettyPrintJSON(input string) string {
 	out := &bytes.Buffer{}
 	if err := json.Indent(out, []byte(input), "", "  "); err != nil {
 		return "PRETTY_ERROR"
