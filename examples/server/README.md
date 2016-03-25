@@ -1,6 +1,6 @@
 # Simple CLI demo
 
-This demonstrates how dynamic values are being updated.
+This demonstrates how dynamic values are being updated in a simple CLI app.
 
 ## Quick set up:
 
@@ -21,13 +21,12 @@ etcdctl set /example/flagz/staticint 9090
 etcdctl set /example/flagz/dynstring foo
 ```
 
-Play around:
+Play around by launching the server and visitng [http://localhost:8080](http://localhost:8080):
 
 ```sh
-./simple_cli &
-etcdctl set /example/flagz/dynstring bar
-etcdctl set /example/flagz/dynint 7777
-etcdctl set /example/flagz/dynstring bad_value
+./simplesrv &
+etcdctl set /example/flagz/example_my_dynamic_string "I'm santient"
+etcdctl set /example/flagz/example_my_dynamic_int 12345
 ```
 
-Profit.
+Marvel at the [flagz endpoint](http://localhost:8080/debug/flagz)).
