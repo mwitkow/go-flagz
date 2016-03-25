@@ -221,7 +221,7 @@ func eventually(t *testing.T, duration time.Duration,
 }
 
 func newCtx() context.Context {
-	c, _ := context.WithTimeout(context.TODO(), 50*time.Millisecond)
+	c, _ := context.WithTimeout(context.TODO(), 500*time.Millisecond)
 	return c
 }
 
