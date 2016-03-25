@@ -9,6 +9,7 @@ install:
   - go get github.com/mwitkow/go-etcd-harness
   - go get github.com/stretchr/testify
   - go get github.com/spf13/pflag
+  - go get golang.org/x/net/context
 
 script:
  - go test -short -race -v ./...
