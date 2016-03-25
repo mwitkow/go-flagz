@@ -6,8 +6,7 @@ go:
 
 install:
   - go get github.com/coreos/etcd
-  - go get github.com/mwitkow/go-flagz/watcher
-
+  - go get github.com/mwitkow/go-etcd-harness
   - go get github.com/stretchr/testify
   - go get github.com/spf13/pflag
 
