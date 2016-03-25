@@ -1,7 +1,15 @@
 language: go
-go: 
- - release
- - tip
+sudo: false
+go:
+  - 1.5
+  - 1.6
+
+install:
+  - go get github.com/coreos/etcd
+  - go get github.com/mwitkow/go-flagz/watcher
+
+  - go get github.com/stretchr/testify
+  - go get github.com/spf13/pflag
 
 script:
- - go test -v ./...
+ - go test -short -race -v ./...
