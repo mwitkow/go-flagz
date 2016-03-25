@@ -23,6 +23,7 @@ func DynInt64(flagSet *pflag.FlagSet, name string, value int64, usage string) *D
 type DynInt64Value struct {
 	ptr       *int64
 	validator func(int64) error
+	notifier  func(oldValue int64, newValue int64)
 }
 
 // Get retrieves the value in a thread-safe manner.
@@ -44,7 +45,10 @@ func (d *DynInt64Value) Set(input string) error {
 			return err
 		}
 	}
-	atomic.StoreInt64(d.ptr, val)
+	oldVal := atomic.SwapInt64(d.ptr, val)
+	if d.notifier != nil {
+		go d.notifier(oldVal, val)
+	}
 	return nil
 }
 
@@ -53,6 +57,12 @@ func (d *DynInt64Value) Set(input string) error {
 // Validators are executed on the same go-routine as the call to `Set`.
 func (d *DynInt64Value) WithValidator(validator func(int64) error) {
 	d.validator = validator
+}
+
+// WithNotifier adds a function is called every time a new value is successfully set.
+// Each notifier is executed in a new go-routine.
+func (d *DynInt64Value) WithNotifier(notifier func(oldValue int64, newValue int64)) {
+	d.notifier = notifier
 }
 
 // Type is an indicator of what this flag represents.

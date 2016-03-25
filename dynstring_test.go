@@ -10,6 +10,8 @@ import (
 
 	"regexp"
 
+	"time"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -35,6 +37,24 @@ func TestDynString_FiresValidators(t *testing.T) {
 
 	assert.NoError(t, set.Set("some_string_1", "else"), "no error from validator when in range")
 	assert.Error(t, set.Set("some_string_1", "else1"), "error from validator when value out of range")
+}
+
+func TestDynString_FiresNotifier(t *testing.T) {
+	waitCh := make(chan bool, 1)
+	notifier := func(oldVal string, newVal string) {
+		assert.EqualValues(t, "something", oldVal, "old value in notify must match previous value")
+		assert.EqualValues(t, "somethingelse", newVal, "new value in notify must match set value")
+		waitCh <- true
+	}
+
+	set := flag.NewFlagSet("foobar", flag.ContinueOnError)
+	DynString(set, "some_string_1", "something", "Use it or lose it").WithNotifier(notifier)
+	set.Set("some_string_1", "somethingelse")
+	select {
+	case <-time.After(5 * time.Millisecond):
+		assert.Fail(t, "failed to trigger notifier")
+	case <-waitCh:
+	}
 }
 
 func Benchmark_String_Dyn_Get(b *testing.B) {

@@ -24,6 +24,7 @@ func DynFloat64(flagSet *pflag.FlagSet, name string, value float64, usage string
 type DynFloat64Value struct {
 	ptr       unsafe.Pointer
 	validator func(float64) error
+	notifier  func(oldValue float64, newValue float64)
 }
 
 // Get retrieves the value in a thread-safe manner.
@@ -46,7 +47,10 @@ func (d *DynFloat64Value) Set(input string) error {
 			return err
 		}
 	}
-	atomic.StorePointer(&d.ptr, unsafe.Pointer(&val))
+	oldPtr := atomic.SwapPointer(&d.ptr, unsafe.Pointer(&val))
+	if d.notifier != nil {
+		go d.notifier(*(*float64)(oldPtr), val)
+	}
 	return nil
 }
 
@@ -55,6 +59,12 @@ func (d *DynFloat64Value) Set(input string) error {
 // Validators are executed on the same go-routine as the call to `Set`.
 func (d *DynFloat64Value) WithValidator(validator func(float64) error) {
 	d.validator = validator
+}
+
+// WithNotifier adds a function is called every time a new value is successfully set.
+// Each notifier is executed in a new go-routine.
+func (d *DynFloat64Value) WithNotifier(notifier func(oldValue float64, newValue float64)) {
+	d.notifier = notifier
 }
 
 // Type is an indicator of what this flag represents.

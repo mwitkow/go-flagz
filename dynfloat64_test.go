@@ -8,6 +8,8 @@ import (
 
 	flag "github.com/spf13/pflag"
 
+	"time"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -32,6 +34,24 @@ func TestDynFloat64_FiresValidators(t *testing.T) {
 
 	assert.NoError(t, set.Set("some_float_1", "13.41"), "no error from validator when in range")
 	assert.Error(t, set.Set("some_float_1", "14.001"), "error from validator when value out of range")
+}
+
+func TestDynFloat64_FiresNotifier(t *testing.T) {
+	waitCh := make(chan bool, 1)
+	notifier := func(oldVal float64, newVal float64) {
+		assert.EqualValues(t, 13.37, oldVal, "old value in notify must match previous value")
+		assert.EqualValues(t, 7.11, newVal, "new value in notify must match set value")
+		waitCh <- true
+	}
+
+	set := flag.NewFlagSet("foobar", flag.ContinueOnError)
+	DynFloat64(set, "some_float_1", 13.37, "Use it or lose it").WithNotifier(notifier)
+	set.Set("some_float_1", "7.11")
+	select {
+	case <-time.After(5 * time.Millisecond):
+		assert.Fail(t, "failed to trigger notifier")
+	case <-waitCh:
+	}
 }
 
 func Benchmark_Float64_Dyn_Get(b *testing.B) {
