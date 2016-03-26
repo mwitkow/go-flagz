@@ -4,11 +4,11 @@
 package main
 
 import (
-	"log"
-	"os"
 	"fmt"
 	"html/template"
+	"log"
 	"net/http"
+	"os"
 
 	etcd "github.com/coreos/etcd/client"
 	"github.com/mwitkow/go-flagz"
@@ -25,10 +25,10 @@ var (
 	etcdEndpoints = serverFlags.StringSlice("etcd_endpoints", []string{"http://localhost:2379"}, "etcd endpoints to connect to.")
 	etcdFlagzPath = serverFlags.String("flagz_etcd_path", "/example/flagz", "etcd path to directory containing flagz.")
 
-	staticInt = serverFlags.Int32("example_my_static_int", 1337, "Something elite here.")
+	staticInt = serverFlags.Int32("example_my_static_int", 1337, "Something integery here.")
 
 	dynStr = flagz.DynString(serverFlags, "example_my_dynamic_string", "initial_value", "Something interesting here.")
-	dynInt = flagz.DynInt64(serverFlags, "example_my_dynamic_int", 1337, "Something elite here.")
+	dynInt = flagz.DynInt64(serverFlags, "example_my_dynamic_int", 1337, "Something integery here.")
 
 	// This is an example of a dynamically-modifiable JSON flag of an arbitrary type.
 	dynJson = flagz.DynJSON(

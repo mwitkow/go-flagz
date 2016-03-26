@@ -4,12 +4,14 @@
 package flagz
 
 import (
+	"bytes"
+	"encoding/json"
 	"log"
 	"net/http"
-	"encoding/json"
-	"bytes"
 	"strings"
 	"text/template"
+
+	"fmt"
 
 	flag "github.com/spf13/pflag"
 )
@@ -44,6 +46,8 @@ func (e *StatusEndpoint) ListFlags(resp http.ResponseWriter, req *http.Request) 
 		}
 		flagSetJSON.Flags = append(flagSetJSON.Flags, flagToJSON(f))
 	})
+	flagSetJSON.ChecksumDynamic = fmt.Sprintf("%x", ChecksumFlagSet(e.flagSet, IsFlagDynamic))
+	flagSetJSON.ChecksumStatic = fmt.Sprintf("%x", ChecksumFlagSet(e.flagSet, func(f *flag.Flag) bool { return !IsFlagDynamic(f) }))
 
 	if requestIsBrowser(req) && req.URL.Query().Get("format") != "json" {
 		resp.WriteHeader(http.StatusOK)
@@ -84,10 +88,12 @@ var (
 	</p>
 	<p>
 	You can easily filter only <a href="?only_changed=true"><span class="label label-primary">changed</span> flagz</a> or filter flags by type:
-	<a href="?type=dynamic"><span class="label label-success">dynamic</span> flags</a> (ones that are tweakable by etcd)
-	or <a href="?type=static"><span class="label label-default">static</span> ones</a>.
 	</p>
-	<p>
+	<ul>
+	  <li><a href="?type=dynamic"><span class="label label-success">dynamic</span></a> - flags tweakable by etcd - checksum <code>{{ .ChecksumDynamic }}</code></li>
+	  <li><a href="?type=static"><span class="label label-default">static</span></a> - initialization-time only flags - checksum <code>{{ .ChecksumStatic }}</code></li>
+	</ul>
+
 
 
 	{{range $flag := .Flags }}
@@ -121,6 +127,9 @@ var (
 )
 
 type flagSetJSON struct {
+	ChecksumStatic  string `json:"checksum_static"`
+	ChecksumDynamic string `json:"checksum_dynamic"`
+
 	Flags []*flagJSON `json:"flags"`
 }
 
