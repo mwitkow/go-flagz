@@ -107,8 +107,8 @@ This code is `beta` quality. It's been running happily in production for non-cry
 
 Features planned:
  
-  * [ ] - #11 monitoring of `FlagSet` checksus using a Prometheus handler
-  * [ ] - #12 support for standard `flag` (requires changes in `spf13/pflag` interfaces)
+  * [ ] - [#11](https://github.com/mwitkow/go-flagz/issues/11) monitoring of `FlagSet` checksus using a Prometheus handler
+  * [ ] - [#12](https://github.com/mwitkow/go-flagz/issues/12) support for standard `flag` (requires changes in `spf13/pflag` interfaces)
 
 ###License
 
