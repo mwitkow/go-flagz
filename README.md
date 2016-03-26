@@ -22,7 +22,7 @@ All of this can be done simultaneously across a whole shard of your services.
 
 ## Features
 
- * compatible with popular `flag` replacement `[spf13/pflag](https://github.com/spf13/pflag)` (e.g. ones using `[spf13/cobra](https://github.com/spf13/cobra)`)
+ * compatible with popular `flag` replacement [`spf13/pflag`](https://github.com/spf13/pflag) (e.g. ones using [`spf13/cobra`](https://github.com/spf13/cobra))
  * dynamic `flag` that are thread-safe and efficient:
    - `DynInt64`
    - `DynFloat64`
