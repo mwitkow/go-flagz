@@ -107,8 +107,8 @@ This code is `beta` quality. It's been running happily in production for non-cry
 
 Features planned:
  
-  * [ ] - monitoring of `FlagSet` checksus using a Prometheus handler
-  * [ ] - support for standard `flag` (requires changes in `spf13/pflag` interfaces)
+  * [ ] - #11 monitoring of `FlagSet` checksus using a Prometheus handler
+  * [ ] - #12 support for standard `flag` (requires changes in `spf13/pflag` interfaces)
 
 ###License
 
