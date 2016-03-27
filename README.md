@@ -33,6 +33,7 @@ All of this can be done simultaneously across a whole shard of your services.
  * `validator` functions for each `flag`, allows the user to provide checks for newly set values
  * `notifier` functions allow user code to be subscribed to `flag` changes
  * `etcd` based watcher that syncs values from a distributed Key-Value store into the program's memory
+ * Prometheus metric for checksums of the current flag configuration
  * an `/debug/flagz` HandlerFunc endpoint that allows for easy inspection of the service's runtime configuration
 
 Here's a teaser of the debug endpoint:
