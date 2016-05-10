@@ -17,7 +17,7 @@ func setFlagDynamic(f *flag.Flag) {
 }
 
 // IsFlagDynamic returns whether the given Flag has been created in a Dynamic mode.
-func IsFlagDynamic(flag *flag.Flag) bool {
-	_, exists := flag.Annotations[dynamicMarker]
-	return exists
+func IsFlagDynamic(f *flag.Flag) bool {
+	_, ok := f.Annotations[dynamicMarker]
+	return ok
 }

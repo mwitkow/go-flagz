@@ -11,10 +11,10 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/net/context"
 	etcd "github.com/coreos/etcd/client"
 	"github.com/mwitkow/go-flagz"
 	flag "github.com/spf13/pflag"
+	"golang.org/x/net/context"
 )
 
 var (
@@ -196,7 +196,7 @@ func (u *Watcher) rollbackEtcdValue(flagName string, resp *etcd.Response) {
 		_, err = u.etcdKeys.Delete(u.context, resp.Node.Key, &etcd.DeleteOptions{PrevIndex: u.lastIndex})
 	}
 	if etcdErr, ok := err.(etcd.Error); ok && etcdErr.Code == etcd.ErrorCodeTestFailed {
-		// Someone probably rolled it back in the mean time.
+		// Someone probably rolled it back in the meantime.
 		u.logger.Printf("flagz: rolled back flag=%v was changed by someone else. All good.", flagName)
 	} else if err != nil {
 		u.logger.Printf("flagz: rolling back flagz=%v failed: %v", flagName, err)
