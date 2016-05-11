@@ -63,8 +63,8 @@ func (d *DynStringSliceValue) WithValidator(validator func([]string) error) {
 	d.validator = validator
 }
 
-// WithNotifier adds a function is called every time a new value is successfully set.
-// Each notifier is executed in a new go-routine.
+// WithNotifier adds a function that is called every time a new value is successfully set.
+// Each notifier is executed asynchronously in a new go-routine.
 func (d *DynStringSliceValue) WithNotifier(notifier func(oldValue []string, newValue []string)) {
 	d.notifier = notifier
 }

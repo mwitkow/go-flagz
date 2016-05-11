@@ -1,4 +1,3 @@
-
 # Go FlagZ 
 
 [![Travis Build](https://travis-ci.org/mwitkow/go-flagz.svg)](https://travis-ci.org/mwitkow/go-flagz)
@@ -16,7 +15,7 @@ File-based or command-line configuration can only be changed when a service rest
 flexibility in normal operations and emergencies. Two examples:
  
  * A new feature launches that you want to A/B test. You want to gradually enable it for a certain fraction of user
- requests  1%, 5%, 20%, 50%, 100%) without a need to restart servers.
+ requests (1%, 5%, 20%, 50%, 100%) without the need to restart servers.
  * Your service is getting overloaded and you want to disable certain costly features. You can't afford 
  restarting because you'd lose important capacity.
  
@@ -36,7 +35,7 @@ All of this can be done simultaneously across a whole shard of your services.
  * `notifier` functions allow user code to be subscribed to `flag` changes
  * `etcd` based watcher that syncs values from a distributed Key-Value store into the program's memory
  * Prometheus metric for checksums of the current flag configuration
- * an `/debug/flagz` HandlerFunc endpoint that allows for easy inspection of the service's runtime configuration
+ * a `/debug/flagz` HandlerFunc endpoint that allows for easy inspection of the service's runtime configuration
 
 Here's a teaser of the debug endpoint:
 
@@ -106,13 +105,13 @@ The `watcher`'s go-routine will watch for `etcd` value changes and synchronise t
 
 # Status
 
-This code is `beta` quality. It's been running happily in production for non-crytical shards.
+This code is `beta` quality. It's been running happily in production for non-critical shards.
 
 Features planned:
  
   * [x] - [#11](https://github.com/mwitkow/go-flagz/issues/11) monitoring of `FlagSet` checksus using a Prometheus handler
   * [ ] - [#12](https://github.com/mwitkow/go-flagz/issues/12) support for standard `flag` (requires changes in `spf13/pflag` interfaces)
 
-###License
+### License
 
 `go-flagz` is released under the Apache 2.0 license. See the [LICENSE](LICENSE) file for details.

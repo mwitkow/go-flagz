@@ -4,10 +4,10 @@
 package flagz
 
 import (
-	"sync/atomic"
-	"unsafe"
 	"encoding/json"
 	"reflect"
+	"sync/atomic"
+	"unsafe"
 
 	flag "github.com/spf13/pflag"
 )
