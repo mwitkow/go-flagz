@@ -16,7 +16,7 @@ import (
 func DynString(flagSet *flag.FlagSet, name string, value string, usage string) *DynStringValue {
 	dynValue := &DynStringValue{ptr: unsafe.Pointer(&value)}
 	flag := flagSet.VarPF(dynValue, name, "", usage)
-	setFlagDynamic(flag)
+	MarkFlagDynamic(flag)
 	return dynValue
 }
 

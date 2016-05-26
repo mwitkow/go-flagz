@@ -16,7 +16,7 @@ import (
 func DynFloat64(flagSet *flag.FlagSet, name string, value float64, usage string) *DynFloat64Value {
 	dynValue := &DynFloat64Value{ptr: unsafe.Pointer(&value)}
 	flag := flagSet.VarPF(dynValue, name, "", usage)
-	setFlagDynamic(flag)
+	MarkFlagDynamic(flag)
 	return dynValue
 }
 

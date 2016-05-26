@@ -15,7 +15,7 @@ import (
 func DynDuration(flagSet *flag.FlagSet, name string, value time.Duration, usage string) *DynDurationValue {
 	dynValue := &DynDurationValue{ptr: (*int64)(&value)}
 	flag := flagSet.VarPF(dynValue, name, "", usage)
-	setFlagDynamic(flag)
+	MarkFlagDynamic(flag)
 	return dynValue
 }
 

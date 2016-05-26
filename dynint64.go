@@ -15,7 +15,7 @@ import (
 func DynInt64(flagSet *flag.FlagSet, name string, value int64, usage string) *DynInt64Value {
 	dynValue := &DynInt64Value{ptr: &value}
 	flag := flagSet.VarPF(dynValue, name, "", usage)
-	setFlagDynamic(flag)
+	MarkFlagDynamic(flag)
 	return dynValue
 }
 
