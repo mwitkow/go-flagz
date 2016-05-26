@@ -31,6 +31,7 @@ All of this can be done simultaneously across a whole shard of your services.
    - `DynDuration`
    - `DynStringSlice`
    - `DynJSON` - a `flag` that takes an arbitrary JSON struct
+   - `DynProto3` - a `flag` that takes a `proto3` struct in JSONpb or binary form
  * `validator` functions for each `flag`, allows the user to provide checks for newly set values
  * `notifier` functions allow user code to be subscribed to `flag` changes
  * `etcd` based watcher that syncs values from a distributed Key-Value store into the program's memory
@@ -105,7 +106,7 @@ The `watcher`'s go-routine will watch for `etcd` value changes and synchronise t
 
 # Status
 
-This code is `beta` quality. It's been running happily in production for non-critical shards.
+This code is *production* quality. It's been running happily in production at Improbable for a few months.
 
 Features planned:
  
