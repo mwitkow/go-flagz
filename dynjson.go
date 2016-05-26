@@ -22,7 +22,7 @@ func DynJSON(flagSet *flag.FlagSet, name string, value interface{}, usage string
 	}
 	dynValue := &DynJSONValue{ptr: unsafe.Pointer(reflectVal.Pointer()), structType: reflectVal.Type().Elem()}
 	flag := flagSet.VarPF(dynValue, name, "", usage)
-	setFlagDynamic(flag)
+	MarkFlagDynamic(flag)
 	return dynValue
 }
 

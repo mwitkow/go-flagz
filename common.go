@@ -9,7 +9,8 @@ const (
 	dynamicMarker = "__is_dynamic"
 )
 
-func setFlagDynamic(f *flag.Flag) {
+// MarkFlagDynamic marks the flag as Dynamic and changeable at runtime.
+func MarkFlagDynamic(f *flag.Flag) {
 	if f.Annotations == nil {
 		f.Annotations = make(map[string][]string)
 	}
