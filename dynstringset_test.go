@@ -20,6 +20,13 @@ func TestDynStringSet_SetAndGet(t *testing.T) {
 	assert.Equal(t, map[string]struct{}{"car": struct{}{}, "bar": struct{}{}}, dynFlag.Get(), "value must be set after update")
 }
 
+func TestDynStringSet_Contains(t *testing.T) {
+	set := flag.NewFlagSet("foobar", flag.ContinueOnError)
+	dynFlag := DynStringSet(set, "some_stringslice_1", []string{"foo", "bar"}, "Use it or lose it")
+	assert.True(t, dynFlag.Contains("foo"), "contains should return true for an added value")
+	assert.False(t, dynFlag.Contains("car"), "contains should return false for a missing value")
+}
+
 func TestDynStringSet_IsMarkedDynamic(t *testing.T) {
 	set := flag.NewFlagSet("foobar", flag.ContinueOnError)
 	DynStringSet(set, "some_stringslice_1", []string{"foo", "bar"}, "Use it or lose it")

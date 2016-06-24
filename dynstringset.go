@@ -58,6 +58,13 @@ func (d *DynStringSetValue) Set(val string) error {
 	return nil
 }
 
+// Contains returns whether the specified string is in the flag.
+func (d *DynStringSetValue) Contains(val string) bool {
+	v := d.Get()
+	_, ok := v[val]
+	return ok
+}
+
 // WithValidator adds a function that checks values before they're set.
 // Any error returned by the validator will lead to the value being rejected.
 // Validators are executed on the same go-routine as the call to `Set`.
