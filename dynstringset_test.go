@@ -14,10 +14,10 @@ import (
 func TestDynStringSet_SetAndGet(t *testing.T) {
 	set := flag.NewFlagSet("foobar", flag.ContinueOnError)
 	dynFlag := DynStringSet(set, "some_stringslice_1", []string{"foo", "bar"}, "Use it or lose it")
-	assert.Equal(t, map[string]bool{"foo": true, "bar": true}, dynFlag.Get(), "value must be default after create")
+	assert.Equal(t, map[string]struct{}{"foo": struct{}{}, "bar": struct{}{}}, dynFlag.Get(), "value must be default after create")
 	err := set.Set("some_stringslice_1", "car,bar")
 	assert.NoError(t, err, "setting value must succeed")
-	assert.Equal(t, map[string]bool{"car": true, "bar": true}, dynFlag.Get(), "value must be set after update")
+	assert.Equal(t, map[string]struct{}{"car": struct{}{}, "bar": struct{}{}}, dynFlag.Get(), "value must be set after update")
 }
 
 func TestDynStringSet_IsMarkedDynamic(t *testing.T) {
@@ -35,11 +35,11 @@ func TestDynStringSet_FiresValidators(t *testing.T) {
 }
 
 func TestDynStringSet_FiresNotifier(t *testing.T) {
-	waitCh := make(chan bool, 1)
-	notifier := func(oldVal map[string]bool, newVal map[string]bool) {
-		assert.EqualValues(t, map[string]bool{"foo": true, "bar": true}, oldVal, "old value in notify must match previous value")
-		assert.EqualValues(t, map[string]bool{"car": true, "far": true}, newVal, "new value in notify must match set value")
-		waitCh <- true
+	waitCh := make(chan struct{}, 1)
+	notifier := func(oldVal map[string]struct{}, newVal map[string]struct{}) {
+		assert.EqualValues(t, map[string]struct{}{"foo": struct{}{}, "bar": struct{}{}}, oldVal, "old value in notify must match previous value")
+		assert.EqualValues(t, map[string]struct{}{"car": struct{}{}, "far": struct{}{}}, newVal, "new value in notify must match set value")
+		waitCh <- struct{}{}
 	}
 
 	set := flag.NewFlagSet("foobar", flag.ContinueOnError)

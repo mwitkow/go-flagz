@@ -13,7 +13,7 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
-// DynStringSet creates a `Flag` that represents `map[string]bool` which is safe to change dynamically at runtime.
+// DynStringSet creates a `Flag` that represents `map[string]struct{}` which is safe to change dynamically at runtime.
 // Unlike `pflag.StringSlice`, consecutive sets don't append to the slice, but override it.
 func DynStringSet(flagSet *flag.FlagSet, name string, value []string, usage string) *DynStringSetValue {
 	set := buildStringSet(value)
@@ -23,16 +23,16 @@ func DynStringSet(flagSet *flag.FlagSet, name string, value []string, usage stri
 	return dynValue
 }
 
-// DynStringSetValue is a flag-related `map[string]bool` value wrapper.
+// DynStringSetValue is a flag-related `map[string]struct{}` value wrapper.
 type DynStringSetValue struct {
 	ptr       unsafe.Pointer
-	validator func(map[string]bool) error
-	notifier  func(oldValue map[string]bool, newValue map[string]bool)
+	validator func(map[string]struct{}) error
+	notifier  func(oldValue map[string]struct{}, newValue map[string]struct{})
 }
 
 // Get retrieves the value in a thread-safe manner.
-func (d *DynStringSetValue) Get() map[string]bool {
-	p := (*map[string]bool)(atomic.LoadPointer(&d.ptr))
+func (d *DynStringSetValue) Get() map[string]struct{} {
+	p := (*map[string]struct{})(atomic.LoadPointer(&d.ptr))
 	return *p
 }
 
@@ -53,7 +53,7 @@ func (d *DynStringSetValue) Set(val string) error {
 	}
 	oldPtr := atomic.SwapPointer(&d.ptr, unsafe.Pointer(&s))
 	if d.notifier != nil {
-		go d.notifier(*(*map[string]bool)(oldPtr), s)
+		go d.notifier(*(*map[string]struct{})(oldPtr), s)
 	}
 	return nil
 }
@@ -61,13 +61,13 @@ func (d *DynStringSetValue) Set(val string) error {
 // WithValidator adds a function that checks values before they're set.
 // Any error returned by the validator will lead to the value being rejected.
 // Validators are executed on the same go-routine as the call to `Set`.
-func (d *DynStringSetValue) WithValidator(validator func(map[string]bool) error) {
+func (d *DynStringSetValue) WithValidator(validator func(map[string]struct{}) error) {
 	d.validator = validator
 }
 
 // WithNotifier adds a function that is called every time a new value is successfully set.
 // Each notifier is executed asynchronously in a new go-routine.
-func (d *DynStringSetValue) WithNotifier(notifier func(oldValue map[string]bool, newValue map[string]bool)) {
+func (d *DynStringSetValue) WithNotifier(notifier func(oldValue map[string]struct{}, newValue map[string]struct{})) {
 	d.notifier = notifier
 }
 
@@ -87,8 +87,8 @@ func (d *DynStringSetValue) String() string {
 }
 
 // ValidateDynStringSetMinElements validates that the given string slice has at least x elements.
-func ValidateDynStringSetMinElements(count int) func(map[string]bool) error {
-	return func(value map[string]bool) error {
+func ValidateDynStringSetMinElements(count int) func(map[string]struct{}) error {
+	return func(value map[string]struct{}) error {
 		if len(value) < count {
 			return fmt.Errorf("value slice %v must have at least %v elements", value, count)
 		}
@@ -96,10 +96,10 @@ func ValidateDynStringSetMinElements(count int) func(map[string]bool) error {
 	}
 }
 
-func buildStringSet(items []string) map[string]bool {
-	res := map[string]bool{}
+func buildStringSet(items []string) map[string]struct{} {
+	res := map[string]struct{}{}
 	for _, item := range items {
-		res[item] = true
+		res[item] = struct{}{}
 	}
 	return res
 }
