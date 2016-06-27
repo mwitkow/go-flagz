@@ -86,7 +86,7 @@ func (d *DynStringSetValue) Type() string {
 // String represents the canonical representation of the type.
 func (d *DynStringSetValue) String() string {
 	v := d.Get()
-	arr := make([]string, len(v))
+	arr := make([]string, 0, len(v))
 	for k := range v {
 		arr = append(arr, k)
 	}
