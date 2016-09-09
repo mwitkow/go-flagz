@@ -35,7 +35,7 @@ All of this can be done simultaneously across a whole shard of your services.
    - `DynProto3` - a `flag` that takes a `proto3` struct in JSONpb or binary form
  * `validator` functions for each `flag`, allows the user to provide checks for newly set values
  * `notifier` functions allow user code to be subscribed to `flag` changes
- * Kubernetes `ConfigMap` watcher, see [configmap/README.md](configmap/README.md].
+ * Kubernetes `ConfigMap` watcher, see [configmap/README.md](configmap/README.md).
  * `etcd` based watcher that syncs values from a distributed Key-Value store into the program's memory
  * Prometheus metric for checksums of the current flag configuration
  * a `/debug/flagz` HandlerFunc endpoint that allows for easy inspection of the service's runtime configuration
