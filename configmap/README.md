@@ -1,7 +1,7 @@
 # Kubernetes (K8s) ConfigMap support
 
 This package allows you to use [ConfigMap](http://kubernetes.io/docs/user-guide/configmap/) objects in Kubernetes to 
-drive the update of dynamic `go-flagz` at runtime of your service. 
+drive the update of [dynamic](https://github.com/mwitkow/go-flagz/#dynamic-json-flag-with-a-validator-and-notifier) `go-flagz` at runtime of your service. 
 
 ## Semantics
 
