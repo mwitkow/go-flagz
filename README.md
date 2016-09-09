@@ -6,7 +6,7 @@
 [![Apache 2.0 License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
 Dynamic, thread-safe `flag` variables that can be modified at runtime through [etcd](https://github.com/coreos/etcd)
-or [Kubernetes](https://kubernetes.io).
+or [Kubernetes](http://kubernetes.io).
 
 For a similar project for JVM languages (Java, scala) see [java-flagz](https://github.com/mwitkow/java-flagz)
  
