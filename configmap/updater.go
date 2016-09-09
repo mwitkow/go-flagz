@@ -1,9 +1,9 @@
-// Copyright 2015 Michal Witkowski. All Rights Reserved.
+// Copyright 2016 Michal Witkowski. All Rights Reserved.
 // See LICENSE for licensing terms.
 
 // Package kubernetes provides an a K8S ConfigMap watcher for the jobs systems.
 
-package kubernetes
+package configmap
 
 import (
 	"fmt"
@@ -16,10 +16,15 @@ import (
 	"github.com/mwitkow/go-flagz"
 )
 
+const (
+	k8sInternalsPrefix = ".."
+	k8sDataSymlink = "..data"
+)
+
+
 var (
 	errFlagNotDynamic = fmt.Errorf("flag is not dynamic")
 	errFlagNotFound = fmt.Errorf("flag not found")
-
 )
 
 // Minimum logger interface needed.
@@ -88,6 +93,10 @@ func (u *Updater) readAll(dynamicOnly bool) error {
 	}
 	errorStrings := []string{}
 	for _, f := range files {
+		if strings.HasPrefix(path.Base(f.Name()), "..") {
+			// skip random ConfigMap internals
+			continue
+		}
 		fullPath := path.Join(u.dirPath, f.Name())
 		if err := u.readFlagFile(fullPath, dynamicOnly); err != nil {
 			if err == errFlagNotDynamic && dynamicOnly {
@@ -127,22 +136,19 @@ func (u *Updater) watchForUpdates() {
 	for {
 		select {
 		case event := <-u.watcher.Events:
-			u.logger.Printf("Got event: %v", event.String())
-
-			if event.Name == u.dirPath {
+			if event.Name == u.dirPath || event.Name == path.Join(u.dirPath, k8sDataSymlink) {
 				// case of the whole directory being re-symlinked
 				switch event.Op {
 				case fsnotify.Create:
 					u.watcher.Add(u.dirPath)
+					u.logger.Printf("flagz: Re-reading flags after ConfigMap update.")
 					if err := u.readAll(/* dynamicOnly */ true); err != nil {
 						u.logger.Printf("flagz: directory reload yielded errors: %v", err.Error())
 					}
 				case fsnotify.Remove:
-					//u.watcher.Remove(u.dirPath)
-					// ignore this now
 				}
 
-			} else if strings.HasPrefix(event.Name, u.dirPath) {
+			} else if strings.HasPrefix(event.Name, u.dirPath) && !isK8sInternalDirectory(event.Name) {
 				switch event.Op {
 				case fsnotify.Create, fsnotify.Write, fsnotify.Rename:
 					if err := u.readFlagFile(event.Name, true); err != nil {
@@ -156,4 +162,9 @@ func (u *Updater) watchForUpdates() {
 			return
 		}
 	}
+}
+
+func isK8sInternalDirectory(filePath string) bool {
+	basePath := path.Base(filePath)
+	return strings.HasPrefix(basePath, k8sInternalsPrefix)
 }

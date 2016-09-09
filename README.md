@@ -5,7 +5,8 @@
 [![GoDoc](http://img.shields.io/badge/GoDoc-Reference-blue.svg)](https://godoc.org/github.com/mwitkow/go-flagz)
 [![Apache 2.0 License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-Dynamic, thread-safe `flag` variables that can be modified at runtime through [etcd](https://github.com/coreos/etcd).
+Dynamic, thread-safe `flag` variables that can be modified at runtime through [etcd](https://github.com/coreos/etcd)
+or [Kubernetes](https://kubernetes.io).
 
 For a similar project for JVM languages (Java, scala) see [java-flagz](https://github.com/mwitkow/java-flagz)
  
@@ -34,6 +35,7 @@ All of this can be done simultaneously across a whole shard of your services.
    - `DynProto3` - a `flag` that takes a `proto3` struct in JSONpb or binary form
  * `validator` functions for each `flag`, allows the user to provide checks for newly set values
  * `notifier` functions allow user code to be subscribed to `flag` changes
+ * Kubernetes `ConfigMap` watcher, see [configmap/README.md](configmap/README.md].
  * `etcd` based watcher that syncs values from a distributed Key-Value store into the program's memory
  * Prometheus metric for checksums of the current flag configuration
  * a `/debug/flagz` HandlerFunc endpoint that allows for easy inspection of the service's runtime configuration

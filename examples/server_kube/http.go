@@ -1,4 +1,4 @@
-// Copyright 2015 Michal Witkowski. All Rights Reserved.
+// Copyright 2016 Michal Witkowski. All Rights Reserved.
 // See LICENSE for licensing terms.
 
 package main
@@ -11,7 +11,7 @@ import (
 	"os"
 
 	"github.com/mwitkow/go-flagz"
-	"github.com/mwitkow/go-flagz/kubernetes"
+	"github.com/mwitkow/go-flagz/configmap"
 	flag "github.com/spf13/pflag"
 )
 
@@ -47,7 +47,7 @@ func main() {
 		logger.Fatalf("%v", err)
 	}
 
-	u, err := kubernetes.New(serverFlags, *dirPathWatch, logger)
+	u, err := configmap.New(serverFlags, *dirPathWatch, logger)
 	if err != nil {
 		logger.Fatalf("Failed setting up an updater %v", err)
 	}
