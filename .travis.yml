@@ -9,7 +9,9 @@ install:
   - go get github.com/prometheus/client_golang/prometheus
   - go get github.com/stretchr/testify
   - go get github.com/spf13/pflag
+  - go get github.com/fsnotify/fsnotify
   - go get golang.org/x/net/context
+
 
 script:
  - go test -race -v ./...
