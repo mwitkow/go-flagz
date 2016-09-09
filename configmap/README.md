@@ -12,6 +12,22 @@ The `Updater` is split into two phases:
  * `Start()` - kicking off a an [`fsnotify`](https://github.com/fsnotify/fsnotify) Go-routine which watches for updates 
    of values in the ConfigMap. To avoid races, this allows only to update `dynamic` flags.
    
+## Code example
+
+```go
+// First parse the flags from the command line, as normal.
+common.SharedFlagSet.Parse(os.Args[1:])
+u, err := configmaps.New(common.SharedFlagSet, "/etc/flagz", logger)
+if err != nil {
+  logger.Fatalf("failed setting up %v", err)
+}
+// Read flagz from etcd and update their values in common.SharedFlagSet
+if err := u.Initialize(); err != nil {
+    log.Fatalf("failed setting up %v", err)
+}
+// Start listening of ConfigMap updates mounted in /etc/flagz.
+u.Start()
+```
 
 ## In a nutshell
 
@@ -40,8 +56,7 @@ Then you just push it to your Kubernetes cluster:
 # kubectl replace -f example.yaml
 ```
 
-And all your jobs referencing this ConfigMap will see updates `go-flagz` updates to keys in your data. For an end to
-end example see [server_kube](../examples/server_kube).
+And all your jobs referencing this ConfigMap via a volume mount will see updates `go-flagz` updates to keys in your data. For an end to end example see [server_kube](../examples/server_kube).
 
 ## Caveats
 
