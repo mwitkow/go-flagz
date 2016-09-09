@@ -30,7 +30,7 @@ data:
   example_my_dynamic_json: |-
     {
       "policy": "allow",
-      "rate: 50
+      "rate": 50
     }
 ```
 
