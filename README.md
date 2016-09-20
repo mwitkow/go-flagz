@@ -104,7 +104,7 @@ The `watcher`'s go-routine will watch for `etcd` value changes and synchronise t
 ## More examples:
 
  * [simple http server](examples/server)
- * [printing CLI command](examples/cli)
+ * [printing CLI command](examples/simple)
 
 # Status
 
