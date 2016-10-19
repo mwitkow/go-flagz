@@ -1,24 +1,25 @@
-# Go FlagZ 
+# Go FlagZ
 
 [![Travis Build](https://travis-ci.org/mwitkow/go-flagz.svg)](https://travis-ci.org/mwitkow/go-flagz)
-[![Go Report Card](http://goreportcard.com/badge/mwitkow/go-flagz)](http://goreportcard.com/report/mwitkow/go-flagz)
+[![Go Report Card](https://goreportcard.com/badge/github.com/mwitkow/go-flagz)](http://goreportcard.com/report/mwitkow/go-flagz)
 [![GoDoc](http://img.shields.io/badge/GoDoc-Reference-blue.svg)](https://godoc.org/github.com/mwitkow/go-flagz)
 [![Apache 2.0 License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-Dynamic, thread-safe `flag` variables that can be modified at runtime through [etcd](https://github.com/coreos/etcd).
+Dynamic, thread-safe `flag` variables that can be modified at runtime through [etcd](https://github.com/coreos/etcd)
+or [Kubernetes](http://kubernetes.io).
 
 For a similar project for JVM languages (Java, scala) see [java-flagz](https://github.com/mwitkow/java-flagz)
- 
+
 ## This sounds crazy. Why?
 
 File-based or command-line configuration can only be changed when a service restarts. Dynamic flags provide
 flexibility in normal operations and emergencies. Two examples:
- 
+
  * A new feature launches that you want to A/B test. You want to gradually enable it for a certain fraction of user
  requests (1%, 5%, 20%, 50%, 100%) without the need to restart servers.
- * Your service is getting overloaded and you want to disable certain costly features. You can't afford 
+ * Your service is getting overloaded and you want to disable certain costly features. You can't afford
  restarting because you'd lose important capacity.
- 
+
 All of this can be done simultaneously across a whole shard of your services.
 
 ## Features
@@ -34,6 +35,7 @@ All of this can be done simultaneously across a whole shard of your services.
    - `DynProto3` - a `flag` that takes a `proto3` struct in JSONpb or binary form
  * `validator` functions for each `flag`, allows the user to provide checks for newly set values
  * `notifier` functions allow user code to be subscribed to `flag` changes
+ * Kubernetes `ConfigMap` watcher, see [configmap/README.md](configmap/README.md).
  * `etcd` based watcher that syncs values from a distributed Key-Value store into the program's memory
  * Prometheus metric for checksums of the current flag configuration
  * a `/debug/flagz` HandlerFunc endpoint that allows for easy inspection of the service's runtime configuration
@@ -52,8 +54,8 @@ Declare a single `pflag.FlagSet` in some public package (e.g. `common.SharedFlag
 ```go
 var (
   limitsConfigFlag = flagz.DynJSON(
-    common.SharedFlagSet, 
-    "rate_limiting_config", 
+    common.SharedFlagSet,
+    "rate_limiting_config",
     &rateLimitConfig{ DefaultRate: 10, Policy: "allow"},
     "Config for service's rate limit",
   ).WithValidator(rateLimitConfigValidator).WithNotifier(onRateLimitChange)
@@ -78,7 +80,7 @@ func MyHandler(resp http.ResponseWriter, req *http.Request) {
 }
 ```
 
-All access to `featuresFlag`, which is a `[]string` flag, is synchronised across go-routines using `atomic` pointer swaps. 
+All access to `featuresFlag`, which is a `[]string` flag, is synchronised across go-routines using `atomic` pointer swaps.
 
 ## Watching for changes from etcd
 
@@ -109,7 +111,7 @@ The `watcher`'s go-routine will watch for `etcd` value changes and synchronise t
 This code is *production* quality. It's been running happily in production at Improbable for a few months.
 
 Features planned:
- 
+
   * [x] - [#11](https://github.com/mwitkow/go-flagz/issues/11) monitoring of `FlagSet` checksus using a Prometheus handler
   * [ ] - [#12](https://github.com/mwitkow/go-flagz/issues/12) support for standard `flag` (requires changes in `spf13/pflag` interfaces)
 
