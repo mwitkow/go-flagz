@@ -3,6 +3,8 @@
 [![Travis Build](https://travis-ci.org/mwitkow/go-flagz.svg)](https://travis-ci.org/mwitkow/go-flagz)
 [![Go Report Card](https://goreportcard.com/badge/github.com/mwitkow/go-flagz)](http://goreportcard.com/report/mwitkow/go-flagz)
 [![GoDoc](http://img.shields.io/badge/GoDoc-Reference-blue.svg)](https://godoc.org/github.com/mwitkow/go-flagz)
+[![SourceGraph](https://sourcegraph.com/github.com/mwitkow/go-flagz/-/badge.svg)](https://sourcegraph.com/github.com/mwitkow/go-flagz/?badge)
+[![codecov](https://codecov.io/gh/mwitkow/go-flagz/branch/master/graph/badge.svg)](https://codecov.io/gh/mwitkow/go-flagz)
 [![Apache 2.0 License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
 Dynamic, thread-safe `flag` variables that can be modified at runtime through [etcd](https://github.com/coreos/etcd)
