@@ -1,8 +1,8 @@
 language: go
 sudo: false
 go:
-  - 1.7
-  - 1.8
+  - 1.7.x
+  - 1.8.x
 
 install:
   - go get github.com/coreos/etcd
@@ -15,4 +15,7 @@ install:
 
 
 script:
- - go test -race -v ./...
+ - ./test_all.sh
+ 
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
