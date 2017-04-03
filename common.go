@@ -3,7 +3,9 @@
 
 package flagz
 
-import flag "github.com/spf13/pflag"
+import (
+	flag "github.com/spf13/pflag"
+)
 
 const (
 	dynamicMarker = "__is_dynamic"

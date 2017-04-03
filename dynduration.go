@@ -62,8 +62,9 @@ func (d *DynDurationValue) WithValidator(validator func(time.Duration) error) *D
 
 // WithNotifier adds a function is called every time a new value is successfully set.
 // Each notifier is executed in a new go-routine.
-func (d *DynDurationValue) WithNotifier(notifier func(oldValue time.Duration, newValue time.Duration)) {
+func (d *DynDurationValue) WithNotifier(notifier func(oldValue time.Duration, newValue time.Duration)) *DynDurationValue {
 	d.notifier = notifier
+	return d
 }
 
 // Type is an indicator of what this flag represents.
