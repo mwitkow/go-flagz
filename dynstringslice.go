@@ -59,14 +59,16 @@ func (d *DynStringSliceValue) Set(val string) error {
 // WithValidator adds a function that checks values before they're set.
 // Any error returned by the validator will lead to the value being rejected.
 // Validators are executed on the same go-routine as the call to `Set`.
-func (d *DynStringSliceValue) WithValidator(validator func([]string) error) {
+func (d *DynStringSliceValue) WithValidator(validator func([]string) error) *DynStringSliceValue {
 	d.validator = validator
+	return d
 }
 
 // WithNotifier adds a function that is called every time a new value is successfully set.
 // Each notifier is executed asynchronously in a new go-routine.
-func (d *DynStringSliceValue) WithNotifier(notifier func(oldValue []string, newValue []string)) {
+func (d *DynStringSliceValue) WithNotifier(notifier func(oldValue []string, newValue []string)) *DynStringSliceValue {
 	d.notifier = notifier
+	return d
 }
 
 // Type is an indicator of what this flag represents.

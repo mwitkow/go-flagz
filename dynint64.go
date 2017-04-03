@@ -55,14 +55,16 @@ func (d *DynInt64Value) Set(input string) error {
 // WithValidator adds a function that checks values before they're set.
 // Any error returned by the validator will lead to the value being rejected.
 // Validators are executed on the same go-routine as the call to `Set`.
-func (d *DynInt64Value) WithValidator(validator func(int64) error) {
+func (d *DynInt64Value) WithValidator(validator func(int64) error) *DynInt64Value {
 	d.validator = validator
+	return d
 }
 
 // WithNotifier adds a function is called every time a new value is successfully set.
 // Each notifier is executed in a new go-routine.
-func (d *DynInt64Value) WithNotifier(notifier func(oldValue int64, newValue int64)) {
+func (d *DynInt64Value) WithNotifier(notifier func(oldValue int64, newValue int64)) *DynInt64Value {
 	d.notifier = notifier
+	return d
 }
 
 // Type is an indicator of what this flag represents.

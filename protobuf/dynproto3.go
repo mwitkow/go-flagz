@@ -75,14 +75,16 @@ func (d *DynProto3Value) Set(input string) error {
 // WithValidator adds a function that checks values before they're set.
 // Any error returned by the validator will lead to the value being rejected.
 // Validators are executed on the same go-routine as the call to `Set`.
-func (d *DynProto3Value) WithValidator(validator func(proto.Message) error) {
+func (d *DynProto3Value) WithValidator(validator func(proto.Message) error) *DynProto3Value {
 	d.validator = validator
+	return d
 }
 
 // WithNotifier adds a function is called every time a new value is successfully set.
 // Each notifier is executed in a new go-routine.
-func (d *DynProto3Value) WithNotifier(notifier func(oldValue proto.Message, newValue proto.Message)) {
+func (d *DynProto3Value) WithNotifier(notifier func(oldValue proto.Message, newValue proto.Message)) *DynProto3Value {
 	d.notifier = notifier
+	return d
 }
 
 // Type is an indicator of what this flag represents.

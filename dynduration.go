@@ -55,8 +55,9 @@ func (d *DynDurationValue) Set(input string) error {
 // WithValidator adds a function that checks values before they're set.
 // Any error returned by the validator will lead to the value being rejected.
 // Validators are executed on the same go-routine as the call to `Set`.
-func (d *DynDurationValue) WithValidator(validator func(time.Duration) error) {
+func (d *DynDurationValue) WithValidator(validator func(time.Duration) error) *DynDurationValue {
 	d.validator = validator
+	return d
 }
 
 // WithNotifier adds a function is called every time a new value is successfully set.

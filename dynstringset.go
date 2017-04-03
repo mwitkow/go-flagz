@@ -68,14 +68,16 @@ func (d *DynStringSetValue) Contains(val string) bool {
 // WithValidator adds a function that checks values before they're set.
 // Any error returned by the validator will lead to the value being rejected.
 // Validators are executed on the same go-routine as the call to `Set`.
-func (d *DynStringSetValue) WithValidator(validator func(map[string]struct{}) error) {
+func (d *DynStringSetValue) WithValidator(validator func(map[string]struct{}) error) *DynStringSetValue {
 	d.validator = validator
+	return d
 }
 
 // WithNotifier adds a function that is called every time a new value is successfully set.
 // Each notifier is executed asynchronously in a new go-routine.
-func (d *DynStringSetValue) WithNotifier(notifier func(oldValue map[string]struct{}, newValue map[string]struct{})) {
+func (d *DynStringSetValue) WithNotifier(notifier func(oldValue map[string]struct{}, newValue map[string]struct{})) *DynStringSetValue {
 	d.notifier = notifier
+	return d
 }
 
 // Type is an indicator of what this flag represents.
