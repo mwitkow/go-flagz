@@ -20,9 +20,15 @@ func DynJSON(flagSet *flag.FlagSet, name string, value interface{}, usage string
 	if reflectVal.Kind() != reflect.Ptr || reflectVal.Elem().Kind() != reflect.Struct {
 		panic("DynJSON value must be a pointer to a struct")
 	}
-	dynValue := &DynJSONValue{ptr: unsafe.Pointer(reflectVal.Pointer()), structType: reflectVal.Type().Elem()}
-	flag := flagSet.VarPF(dynValue, name, "", usage)
-	MarkFlagDynamic(flag)
+	dynValue := &DynJSONValue{
+		ptr:        unsafe.Pointer(reflectVal.Pointer()),
+		structType: reflectVal.Type().Elem(),
+		flagSet:    flagSet,
+		flagName: name,
+	}
+	f := flagSet.VarPF(dynValue, name, "", usage)
+	f.DefValue = dynValue.usageString()
+	MarkFlagDynamic(f)
 	return dynValue
 }
 
@@ -32,6 +38,8 @@ type DynJSONValue struct {
 	ptr        unsafe.Pointer
 	validator  func(interface{}) error
 	notifier   func(oldValue interface{}, newValue interface{})
+	flagName   string
+	flagSet    *flag.FlagSet
 }
 
 // Get retrieves the value in its original JSON struct type in a thread-safe manner.
@@ -63,15 +71,29 @@ func (d *DynJSONValue) Set(input string) error {
 // WithValidator adds a function that checks values before they're set.
 // Any error returned by the validator will lead to the value being rejected.
 // Validators are executed on the same go-routine as the call to `Set`.
-func (d *DynJSONValue) WithValidator(validator func(interface{}) error) {
+func (d *DynJSONValue) WithValidator(validator func(interface{}) error) *DynJSONValue {
 	d.validator = validator
+	return d
 }
 
 // WithNotifier adds a function is called every time a new value is successfully set.
 // Each notifier is executed in a new go-routine.
-func (d *DynJSONValue) WithNotifier(notifier func(oldValue interface{}, newValue interface{})) {
+func (d *DynJSONValue) WithNotifier(notifier func(oldValue interface{}, newValue interface{})) *DynJSONValue {
 	d.notifier = notifier
+	return d
 }
+
+// WithFileFlag adds an companion <name>_path flag that allows this value to be read from a file with flagz.ReadFileFlags.
+//
+// This is useful for reading large JSON files as flags. If the companion flag's value (whether default or overwritten)
+// is set to empty string, nothing is read.
+//
+// Flag value reads are subject to notifiers and validators.
+func (d *DynJSONValue) WithFileFlag(defaultPath string) *DynJSONValue {
+	FileReadFlag(d.flagSet, d.flagName, defaultPath)
+	return d
+}
+
 
 // Type is an indicator of what this flag represents.
 func (d *DynJSONValue) Type() string {
@@ -95,6 +117,15 @@ func (d *DynJSONValue) String() string {
 		return "ERR"
 	}
 	return string(out)
+}
+
+func (d *DynJSONValue) usageString() string {
+	s := d.String()
+	if len(s) > 128 {
+		return "{ ... truncated ... }"
+	} else {
+		return s
+	}
 }
 
 func (d *DynJSONValue) unsafeToStoredType(p unsafe.Pointer) interface{} {
