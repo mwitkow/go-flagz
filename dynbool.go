@@ -16,6 +16,7 @@ func DynBool(flagSet *flag.FlagSet, name string, value bool, usage string) *DynB
 	v := boolToInt(value)
 	dynValue := &DynBoolValue{ptr: &v}
 	flag := flagSet.VarPF(dynValue, name, "", usage)
+	flag.NoOptDefVal = "true"
 	MarkFlagDynamic(flag)
 	return dynValue
 }
