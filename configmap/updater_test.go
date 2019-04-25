@@ -4,6 +4,8 @@
 package configmap_test
 
 import (
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -67,6 +69,13 @@ func (s *updaterTestSuite) TearDownTest() {
 func (s *updaterTestSuite) copyTestDataToDir() {
 	copyCmd := exec.Command("cp", "--archive", "testdata", s.tempDir)
 	require.NoError(s.T(), copyCmd.Run(), "copying testdata directory to tempdir must not fail")
+	// We are storing file testdata/9989_09_09_07_32_32.099817316 and renaming it to testdata/..9989_09_09_07_32_32.099817316,
+	// because go modules don't allow repos with files with .. in their filename. See https://github.com/golang/go/issues/27299.
+	for _, p := range []string{firstGoodDir, secondGoodDir, badStaticDir} {
+		pOld := filepath.Join(s.tempDir, "testdata", strings.TrimPrefix(p, ".."))
+		pNew := filepath.Join(s.tempDir, "testdata", p)
+		require.NoError(s.T(), os.Rename(pOld, pNew), "renaming %q to %q failed", pOld, pNew)
+	}
 }
 
 func (s *updaterTestSuite) linkDataDirTo(newDataDir string) {
