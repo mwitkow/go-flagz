@@ -17,7 +17,7 @@ import (
 
 	"github.com/mwitkow/go-flagz"
 	"github.com/mwitkow/go-flagz/monitoring"
-	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	flag "github.com/spf13/pflag"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -31,7 +31,7 @@ type monitoringTestSuite struct {
 }
 
 func TestMonitoringTestSuite(t *testing.T) {
-	suite.Run(t, &monitoringTestSuite{promHandler: prometheus.Handler()})
+	suite.Run(t, &monitoringTestSuite{promHandler: promhttp.Handler()})
 }
 
 func (s *monitoringTestSuite) SetupTest() {
